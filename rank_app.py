@@ -1,5 +1,5 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai  # ★旧 google.generativeai から新しいライブラリに変更
 import re
 
 # --- 1. セキュリティ設定 ---
@@ -26,9 +26,10 @@ if not check_password():
     st.stop()
 
 # --- 2. AIの設定 ---
-# エラー回避のため、モデル名は 'gemini-1.5-flash' を使用
-genai.configure(api_key="")
-model = genai.GenerativeModel('gemini-1.5-flash')
+# ★注意: テスト用にそのままにしていますが、APIキーの直書きはセキュリティ上危険です。
+# 動作確認が終わったら Streamlit の secrets.toml での管理に切り替えることをおすすめします。
+API_KEY = "AIzaSyDb1MX4vLFgPvcUlsalcE59VnSvrRULjC8"
+client = genai.Client(api_key=API_KEY)  # ★新しいクライアント初期化方法
 
 st.set_page_config(page_title="プロ仕様・求職者ランク判定", page_icon=":chart_with_upwards_trend:")
 st.title(":chart_with_upwards_trend: 求職者ランク判定プロ")
@@ -65,17 +66,31 @@ if st.button("分析を開始する"):
             
             # モードに応じたAIプロンプト
             if mode != "1. 簡易分析（基本情報のみ）":
+                
+                # ★モード3：ファイルの中身を読み込んでAIに渡す処理を追加
+                file_contents = ""
+                if mode == "3. 詳細分析（資料添付あり）" and uploaded_files:
+                    for file in uploaded_files:
+                        if file.name.endswith('.txt'):
+                            file_contents += file.getvalue().decode("utf-8") + "\n"
+                        # ※PDFを読み込む場合は別途 PyPDF2 などのライブラリの導入が必要です
+
                 if mode == "2. 通常分析（実績AI判定あり）":
                     prompt = f"キャリアアドバイザーとして以下の実績を厳しく10点満点で採点し、『点数：〇点』とだけ答えて。実績：{achievement_text}"
                 else:
-                    prompt = f"資料と実績に基づき、求職者の市場価値を10点満点で採点し『点数：〇点』とだけ答えて。実績：{achievement_text}"
+                    prompt = f"資料と実績に基づき、求職者の市場価値を10点満点で採点し『点数：〇点』とだけ答えて。実績：{achievement_text}\n資料内容：\n{file_contents}"
                 
-                response = model.generate_content(prompt)
+                # ★新しいライブラリでのAI実行処理
+                response = client.models.generate_content(
+                    model='gemini-1.5-flash',
+                    contents=prompt
+                )
+                
                 score_match = re.search(r'\d+', response.text)
                 if score_match:
                     ai_score = int(score_match.group())
 
-            # 総合スコア計算（ロジックの調整）
+            # 総合スコア計算
             base_score = 0
             if 22 <= age <= 35: base_score += 5
             if job_changes <= 2: base_score += 5
@@ -83,12 +98,18 @@ if st.button("分析を開始する"):
             total_score = base_score + ai_score - (short_term * 4)
 
             # --- 修正後のランク判定ロジック ---
-            if total_score >= 18: rank, color ="S", "red"  
-            elif total_score >= 15: rank, color = "A", "orange"  #←ここに"A"を追加
-            elif total_score >= 12: rank, color = "B", "yellow"  #←ここに"B"を追加
-            elif total_score >= 9: rank, color = "C", "green"   # ← ここに "C" を追加
-            elif total_score >= 5: rank, color = "D", "blue"    # ← ここに "D" を追加
-            else: rank, color = "Z", "gray"    # ← ここに "Z" を追加
+            if total_score >= 18: 
+                rank, color = "S", "red"
+            elif total_score >= 15: 
+                rank, color = "A", "orange" 
+            elif total_score >= 12: 
+                rank, color = "B", "yellow" 
+            elif total_score >= 9: 
+                rank, color = "C", "green"  
+            elif total_score >= 5: 
+                rank, color = "D", "blue"   
+            else: 
+                rank, color = "Z", "gray"   
 
             # 表示
             st.balloons()
@@ -102,6 +123,7 @@ if st.button("分析を開始する"):
 
         except Exception as e:
             st.error(f"エラーが発生しました。設定を確認してください：{e}")
+
 
 
 
