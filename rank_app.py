@@ -28,7 +28,7 @@ if not check_password():
 # --- 2. AIの設定 ---
 # ★注意: テスト用にそのままにしていますが、APIキーの直書きはセキュリティ上危険です。
 # 動作確認が終わったら Streamlit の secrets.toml での管理に切り替えることをおすすめします。
-API_KEY = "AIzaSyDb1MX4vLFgPvcUlsalcE59VnSvrRULjC8"
+API_KEY = "AIzaSyB_1CYpl577VSsKZ7s-pvGmw-CJvMwV7b8"
 client = genai.Client(api_key=API_KEY)  # ★新しいクライアント初期化方法
 
 st.set_page_config(page_title="プロ仕様・求職者ランク判定", page_icon=":chart_with_upwards_trend:")
@@ -123,6 +123,7 @@ if st.button("分析を開始する"):
 
         except Exception as e:
             st.error(f"エラーが発生しました。設定を確認してください：{e}")
+
 
 
 
