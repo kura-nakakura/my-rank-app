@@ -83,7 +83,7 @@ if st.button("分析を開始する"):
             total_score = base_score + ai_score - (short_term * 4)
 
             # --- 修正後のランク判定ロジック ---
-            if total_score >= 18: rank, color = "S", "red"  
+            if total_score >= 18: rank, color ="S", "red"  
             elif total_score >= 15: rank, color = "A", "orange"  #←ここに"A"を追加
             elif total_score >= 12: rank, color = "B", "yellow"  #←ここに"B"を追加
             elif total_score >= 9: rank, color = "C", "green"   # ← ここに "C" を追加
@@ -102,6 +102,7 @@ if st.button("分析を開始する"):
 
         except Exception as e:
             st.error(f"エラーが発生しました。設定を確認してください：{e}")
+
 
 
 
