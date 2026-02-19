@@ -3,7 +3,7 @@ import google.generativeai as genai
 
 # --- 1. AIの設定（ここにコピーしたキーを貼り付け） ---
 genai.configure(api_key="AIzaSyCYq5C0BMRu1BPHEKaLf4qDc75uQy7DYOw")
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
 st.set_page_config(page_title="求職者ランク判定 AI版", page_icon=":robot_face:")
 st.title(":robot_face: AI求職者ランク判定")
