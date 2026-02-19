@@ -82,13 +82,19 @@ if st.button("分析を開始する"):
             
             total_score = base_score + ai_score - (short_term * 4)
 
-            # S〜Zランク判定（20点満点想定）
-            if total_score >= 18: rank, color = "S", "red"
-            elif total_score >= 15: rank, color = "orange" # A
-            elif total_score >= 12: rank, color = "yellow" # B
-            elif total_score >= 9: rank, color = "green"  # C
-            elif total_score >= 5: rank, color = "blue"   # D
-            else: rank, color = "gray" # Z
+            # --- 修正後のランク判定ロジック ---
+            if total_score >= 18: 
+                rank, color = "S", "red"
+            elif total_score >= 15: 
+                rank, color = "A", "orange"  # ← ここに "A" を追加
+            elif total_score >= 12: 
+                rank, color = "B", "yellow"  # ← ここに "B" を追加
+            elif total_score >= 9: 
+                rank, color = "C", "green"   # ← ここに "C" を追加
+            elif total_score >= 5: 
+                rank, color = "D", "blue"    # ← ここに "D" を追加
+            else: 
+                rank, color = "Z", "gray"    # ← ここに "Z" を追加
 
             # 表示
             st.balloons()
@@ -102,5 +108,6 @@ if st.button("分析を開始する"):
 
         except Exception as e:
             st.error(f"エラーが発生しました。設定を確認してください：{e}")
+
 
 
