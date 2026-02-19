@@ -3,7 +3,7 @@ import google.generativeai as genai
 
 # --- 1. AIの設定（ここにコピーしたキーを貼り付け） ---
 genai.configure(api_key="AIzaSyDb1MX4vLFgPvcUlsalcE59VnSvrRULjC8")
-model = genai.GenerativeModel('models/gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.set_page_config(page_title="求職者ランク判定 AI版", page_icon=":robot_face:")
 st.title(":robot_face: AI求職者ランク判定")
@@ -53,4 +53,5 @@ if st.button("AI分析を開始"):
             except Exception as e:
 
                 st.error(f"AIエラーが発生しました。APIキーが正しいか確認してください：{e}")
+
 
