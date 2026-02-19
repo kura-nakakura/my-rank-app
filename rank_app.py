@@ -27,7 +27,7 @@ if not check_password():
 
 # --- 2. AIの設定 ---
 # エラー回避のため、モデル名は 'gemini-1.5-flash' を使用
-genai.configure(api_key="AIzaSyDb1MX4vLFgPvcUlsalcE59VnSvrRULjC8")
+genai.configure(api_key="")
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.set_page_config(page_title="プロ仕様・求職者ランク判定", page_icon=":chart_with_upwards_trend:")
@@ -108,6 +108,7 @@ if st.button("分析を開始する"):
 
         except Exception as e:
             st.error(f"エラーが発生しました。設定を確認してください：{e}")
+
 
 
 
