@@ -4,7 +4,7 @@ import re
 
 # --- 1. セキュリティ設定 ---
 # ログインパスワード（好きなものに変えてください）
-LOGIN_PASSWORD = "your_password123" 
+LOGIN_PASSWORD = "HR9237" 
 
 def check_password():
     if "password_correct" not in st.session_state:
@@ -102,4 +102,5 @@ if st.button("分析を開始する"):
 
         except Exception as e:
             st.error(f"エラーが発生しました。設定を確認してください：{e}")
+
 
