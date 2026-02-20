@@ -173,19 +173,19 @@ if st.button("分析を開始する", type="primary"):
             if job_changes <= 2: base_score += 5
             total_score = base_score + ai_score - (short_term * 4)
 
-            # ランク判定
+            # ランク判定（絵文字を削除し、スタイリッシュな英語表記を追加）
             if total_score >= 18: 
-                rank, color_name, rank_color = "S", "🟢 優秀 (S)", "#00ff00"
+                rank, color_name, rank_color = "S", "優秀 (Class-S)", "#00ff00"
             elif total_score >= 15: 
-                rank, color_name, rank_color = "A", "🔵 良好 (A)", "#00e5ff"
+                rank, color_name, rank_color = "A", "良好 (Class-A)", "#00e5ff"
             elif total_score >= 12: 
-                rank, color_name, rank_color = "B", "🟡 標準 (B)", "#ffff00"
+                rank, color_name, rank_color = "B", "標準 (Class-B)", "#ffff00"
             elif total_score >= 9: 
-                rank, color_name, rank_color = "C", "🟠 要努力 (C)", "#ff9900"
+                rank, color_name, rank_color = "C", "要努力 (Class-C)", "#ff9900"
             elif total_score >= 5: 
-                rank, color_name, rank_color = "D", "🔴 厳しい (D)", "#ff0000"
+                rank, color_name, rank_color = "D", "厳しい (Class-D)", "#ff0000"
             else: 
-                rank, color_name, rank_color = "Z", "⚫ 測定不能 (Z)", "#888888"
+                rank, color_name, rank_color = "Z", "測定不能 (Error)", "#888888"
 
             # ==========================================
             # 🎨 3Dサイバーパネルでの結果表示
@@ -199,7 +199,14 @@ if st.button("分析を開始する", type="primary"):
             st.markdown('<div class="cyber-panel scan-effect">', unsafe_allow_html=True)
 
             st.markdown("## 📊 AI キャリア分析レポート")
-            st.markdown(f"<h3 style='color: {rank_color}; text-shadow: 0 0 15px {rank_color};'>総合評価: {color_name}</h3>", unsafe_allow_html=True)
+            
+            # ★変更：絵文字の代わりに、CSSで「発光するLEDランプ」を生成してテキストの横に配置！
+            st.markdown(f"""
+            <div style='display: flex; align-items: center; margin-bottom: 15px;'>
+                <div style='width: 22px; height: 22px; border-radius: 50%; background-color: {rank_color}; box-shadow: 0 0 20px {rank_color}, inset 0 0 8px rgba(255,255,255,0.6); margin-right: 15px;'></div>
+                <h3 style='color: {rank_color}; text-shadow: 0 0 15px {rank_color}; margin: 0;'>総合評価: {color_name}</h3>
+            </div>
+            """, unsafe_allow_html=True)
             st.progress(max(0, min(total_score / 20, 1.0)))
             st.caption(f"獲得スコア: {total_score}点 / 満点: 20点")
             
@@ -236,6 +243,7 @@ if st.button("分析を開始する", type="primary"):
 
         except Exception as e:
             st.error(f"❌ 分析中にエラーが発生しました: {e}")
+
 
 
 
