@@ -29,8 +29,6 @@ if not check_password():
 # st.secrets を使って、隠された場所からキーを呼び出します
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
-# 以下の1行を一時的に追加
-print("今のAPIキーの最初の10文字:", API_KEY[:10])
 
 st.set_page_config(page_title="プロ仕様・求職者ランク判定", page_icon=":chart_with_upwards_trend:")
 st.title(":chart_with_upwards_trend: 求職者ランク判定プロ")
@@ -124,6 +122,7 @@ if st.button("分析を開始する"):
 
         except Exception as e:
             st.error(f"エラーが発生しました。設定を確認してください：{e}")
+
 
 
 
