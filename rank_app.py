@@ -142,11 +142,37 @@ if app_mode == "1. 求職者ランク判定":
                     reason_disp, advice_disp = get_section('評価理由', full), get_section('改善アドバイス', full)
                     pr_text, motive_text, letter_text = get_section('自己PR例', full), get_section('志望動機例', full), get_section('推薦文', full)
 
-                total_score = (5 if 22<=age<=35 else 0) + (5 if job_changes<=2 else 0) + ai_score - (short_term * 4)
-                if total_score >= 18: cn, rc = "優秀 (Class-S)", "#00ff00"
-                elif total_score >= 15: cn, rc = "良好 (Class-A)", "#00e5ff"
-                elif total_score >= 12: cn, rc = "標準 (Class-B)", "#ffff00"
-                elif total_score >= 9: cn, rc = "要努力 (Class-C)", "#ff9900"
+                # --- ライフアップ流・厳格スコアリング ---
+                # 1. 年齢スコア
+                if age < 20: age_s = -8
+                elif 20 <= age <= 21: age_s = 8
+                elif 22 <= age <= 25: age_s = 10
+                elif 26 <= age <= 29: age_s = 8
+                elif 30 <= age <= 35: age_s = 7
+                else: age_s = 3
+
+                # 2. 転職回数/短期離職ペナルティ
+                job_bonus = 0
+                if age <= 24 and job_changes == 0: job_bonus = 10
+                elif 25 <= age <= 29 and job_changes <= 1: job_bonus = 10
+                elif 30 <= age <= 35 and job_changes <= 2: job_bonus = 10
+                elif job_changes <= 1: job_bonus = 5
+
+                # ペナルティ合算
+                job_penalty = 0
+                if job_changes == 2: job_penalty = -5
+                elif job_changes == 4: job_penalty = -12
+                elif job_changes >= 5: job_penalty = -20
+                
+                # ★短期離職ペナルティ (1回につき-10点の重い判定)
+                st_penalty = short_term * 10
+
+                total_score = age_s + job_bonus + job_penalty - st_penalty + ai_score
+                
+                if total_score >= 23: cn, rc = "優秀 (Class-S)", "#00ff00"
+                elif total_score >= 18: cn, rc = "良好 (Class-A)", "#00e5ff"
+                elif total_score >= 13: cn, rc = "標準 (Class-B)", "#ffff00"
+                elif total_score >= 8: cn, rc = "要努力 (Class-C)", "#ff9900"
                 else: cn, rc = "厳しい (Class-D)", "#ff0000"
 
                 st.toast("スキャン完了：成功しました")
@@ -249,6 +275,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 # ★ここにもエラーガードを追加
                 if "429" in str(e): st.error("⚠️ 【利用制限】上限に達しました。30秒ほど待ってから再試行してください。")
                 else: st.error(f"❌ 解析エラー: {e}")
+
 
 
 
