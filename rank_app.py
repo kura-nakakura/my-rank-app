@@ -152,13 +152,20 @@ if app_mode == "1. 求職者ランク判定":
                 st.toast("スキャン完了：成功しました")
                 flash_id = str(time.time())
                 st.markdown(f'<div id="f-{flash_id}" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,229,255,0.4);z-index:9999;pointer-events:none;animation:flash-fade 0.7s forwards;"></div>', unsafe_allow_html=True)
-                st.markdown('<div class="cyber-panel scan-effect">', unsafe_allow_html=True)
-                st.markdown(f"### 評価: <span style='color:{rc}'>{cn}</span>", unsafe_allow_html=True)
-                st.progress(max(0.0, min(total_score / 20.0, 1.0)))
-                c1, c2, c3 = st.columns(3)
-                c1.metric("👤 基本情報", f"{(5 if 22<=age<=35 else 0) + (5 if job_changes<=2 else 0)} pt")
-                c2.metric("🤖 AIスコア", f"{ai_score} pt")
-                c3.metric("⚠️ リスク", f"-{short_term * 4} pt", delta_color="inverse")
+                
+                st.markdown(f"""
+                <div class="cyber-panel scan-effect">
+                    <h3 style="margin-top:0;">分析結果: <span style="color:{rc};">{cn}</span></h3>
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 5px; height: 10px; margin-bottom: 20px;">
+                        <div style="background: {rc}; width: {min(100, total_score*5)}%; height: 100%; border-radius: 5px;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
+                        <div style="text-align: center;"><small>基本情報</small><br><b style="color:#00E5FF; font-size:1.5rem;">{(5 if 22<=age<=35 else 0) + (5 if job_changes<=2 else 0)}pt</b></div>
+                        <div style="text-align: center;"><small>AIスコア</small><br><b style="color:#00E5FF; font-size:1.5rem;">{ai_score}pt</b></div>
+                        <div style="text-align: center;"><small>リスク</small><br><b style="color:#FF4B4B; font-size:1.5rem;">-{short_term * 4}pt</b></div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
                 # ★追加：エージェント向け指示（ランク判定版）
                 if total_score >= 15:
@@ -219,8 +226,20 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 st.toast("解析完了：成功しました")
                 flash_id = str(time.time())
                 st.markdown(f'<div id="f-{flash_id}" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,229,255,0.4);z-index:9999;pointer-events:none;animation:flash-fade 0.7s forwards;"></div>', unsafe_allow_html=True)
-                st.markdown('<div class="cyber-panel">', unsafe_allow_html=True)
-                st.subheader(f"判定: {ms}/100"); st.progress(ms / 100)
+                st.markdown(f"""
+                <div class="cyber-panel scan-effect">
+                    <h3 style="margin-top:0;">マッチ判定: <span style="color:#00E5FF;">{ms}/100</span></h3>
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 5px; height: 10px; margin-bottom: 20px;">
+                        <div style="background: #00E5FF; width: {ms}%; height: 100%; border-radius: 5px;"></div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                if ms >= 75:
+                    st.success("🔥 **【エージェント指示】** 非常に高いマッチ度です！すぐに推薦状を作成し、面接対策のスケジュールを組んでください。")
+                elif ms < 50:
+                    st.error("🚨 **【エージェント指示】** 優先度：低（ミスマッチの可能性）。慎重なフォローが必要です。")
+
                 st.markdown(f"**理由:** {get_section('評価理由', full_m)}")
                 st.markdown(f"**戦略:** {get_section('面接突破戦略', full_m)}")
                 if m_mode == "2. 詳細マッチング（推薦文あり）":
@@ -230,6 +249,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 # ★ここにもエラーガードを追加
                 if "429" in str(e): st.error("⚠️ 【利用制限】上限に達しました。30秒ほど待ってから再試行してください。")
                 else: st.error(f"❌ 解析エラー: {e}")
+
 
 
 
