@@ -139,7 +139,7 @@ if st.button("分析を開始する", type="primary"): # ボタンも目立た�
                     prompt = f"資料と実績に基づき、求職者の市場価値を10点満点で採点し『点数：〇点』とだけ答えて。実績：{achievement_text}\n資料内容：\n{file_contents}"
                 
                 response = client.models.generate_content(
-                    model='gemini-1.5-flash',
+                    model='gemini-2.5-flash',
                     contents=prompt
                 )
                 
@@ -216,6 +216,7 @@ if st.button("分析を開始する", type="primary"): # ボタンも目立た�
 
         except Exception as e:
             st.error(f"❌ 分析中にエラーが発生しました: {e}")
+
 
 
 
