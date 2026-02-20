@@ -156,15 +156,15 @@ if st.button("分析を開始する", type="primary"): # ボタンも目立た�
 
             # --- ランク判定ロジック ---
             if total_score >= 18: 
-                rank, color_name, rank_color = "S", "🟢 優秀 (S)", "#00ff00"
+                rank, color_name, rank_color = "S", "★ 優秀 (S)", "#00ff00"
             elif total_score >= 15: 
-                rank, color_name, rank_color = "A", "🔵 良好 (A)", "#00e5ff"
+                rank, color_name, rank_color = "A", "◎ 良好 (A)", "#00e5ff"
             elif total_score >= 12: 
-                rank, color_name, rank_color = "B", "🟡 標準 (B)", "#ffff00"
+                rank, color_name, rank_color = "B", "〇 標準 (B)", "#ffff00"
             elif total_score >= 9: 
-                rank, color_name, rank_color = "C", "🟠 要努力 (C)", "#ff9900"
+                rank, color_name, rank_color = "C", "△ 要努力 (C)", "#ff9900"
             elif total_score >= 5: 
-                rank, color_name, rank_color = "D", "🔴 厳しい (D)", "#ff0000"
+                rank, color_name, rank_color = "D", "✖ 厳しい (D)", "#ff0000"
             else: 
                 rank, color_name, rank_color = "Z", "⚫ 測定不能 (Z)", "#888888"
 
@@ -216,6 +216,7 @@ if st.button("分析を開始する", type="primary"): # ボタンも目立た�
 
         except Exception as e:
             st.error(f"❌ 分析中にエラーが発生しました: {e}")
+
 
 
 
