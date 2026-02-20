@@ -163,6 +163,7 @@ if app_mode == "1. 求職者ランク判定":
                 # ペナルティ合算
                 job_penalty = 0
                 if job_changes == 2: job_penalty = -5
+                elif job_changes == 3: job_penalty = -10
                 elif job_changes == 4: job_penalty = -12
                 elif job_changes >= 5: job_penalty = -20
                 
@@ -278,6 +279,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 # ★ここにもエラーガードを追加
                 if "429" in str(e): st.error("⚠️ 【利用制限】上限に達しました。30秒ほど待ってから再試行してください。")
                 else: st.error(f"❌ 解析エラー: {e}")
+
 
 
 
