@@ -121,7 +121,7 @@ if app_mode == "1. 求職者ランク判定":
         achievement_text = st.text_area("追加の実績・補足事項（任意）", height=100)
         uploaded_files = st.file_uploader("資料を添付 (PDF/TXT)", accept_multiple_files=True, type=['txt', 'pdf'])
 
-    if st.button("📃 分析を開始する", type="primary"):
+    if st.button("分析を開始する", type="primary"):
         with st.spinner("AIがデータをディープスキャン中..."):
             try:
                 safe_ind = target_industry if target_industry else "全業種"
@@ -209,7 +209,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
             s_text = st.text_area("経歴・スキル・面談メモ", height=150)
             s_files = st.file_uploader("履歴書などを添付", accept_multiple_files=True, type=['txt', 'pdf'], key="sf")
 
-    if st.button("✨ マッチング分析を実行", type="primary"):
+    if st.button("マッチング分析を実行", type="primary"):
         with st.spinner("AIが相性を解析中..."):
             try:
                 if m_mode == "1. 簡易マッチング（基本情報・経験のみ）":
@@ -243,4 +243,5 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 elif ms < 50: st.error("🚨 **【エージェント向け】** 優先度：低。慎重なフォローが必要です。")
                 st.markdown("</div>", unsafe_allow_html=True)
             except Exception as e: st.error(f"❌ 解析中にエラーが発生しました: {e}")
+
 
