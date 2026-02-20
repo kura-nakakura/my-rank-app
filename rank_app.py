@@ -20,11 +20,8 @@ st.markdown("""
         border: 1px solid #00E5FF;
         box-shadow: 0 0 20px rgba(0, 229, 255, 0.4), inset 0 0 10px rgba(0, 229, 255, 0.2);
         border-radius: 10px;
-        padding: 25px;
-        margin-top: 20px;
-        backdrop-filter: blur(5px);
-        position: relative;
-        overflow: hidden;
+        padding: 25px; margin-top: 20px;
+        backdrop-filter: blur(5px); position: relative; overflow: hidden;
     }
     .scan-effect::before {
         content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
@@ -41,7 +38,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 1. セキュリティ（ログイン） ---
+# --- 1. セキュリティ設定 ---
 LOGIN_PASSWORD = "HR9237" 
 
 def check_password():
@@ -73,9 +70,16 @@ def read_files(files):
     return content
 
 # --- 2. AIクライアント設定 ---
-# Gemini 2.5 Flashは思考機能を備え、コスト効率と精度のバランスに優れています
+# Gemini 2.5 Flashは価格とパフォーマンスのバランスが最適化されたモデルです
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 st.set_page_config(page_title="AIエージェントシステム", page_icon="🤖", layout="wide")
+
+# --- セクション抽出ヘルパー ---
+def get_section(name, text):
+    if not text: return ""
+    pattern = f"【{name}】(.*?)(?=【|$)"
+    match = re.search(pattern, text, re.DOTALL)
+    return match.group(1).strip() if match else ""
 
 # ==========================================
 # 🎛️ メインメニュー
@@ -84,14 +88,8 @@ with st.sidebar:
     st.markdown("### 🎛️ メインメニュー")
     app_mode = st.radio("使用するツールを選択してください", ["1. 求職者ランク判定", "2. 企業×求職者 マッチング分析"])
     st.divider()
-    st.header("♠アドバイザー情報")
-    my_name = st.text_input("あなたの氏名", value="山田 太郎")
-
-# --- セクション抽出用ヘルパー関数 ---
-def get_section(name, text):
-    pattern = f"【{name}】(.*?)(?=【|$)"
-    match = re.search(pattern, text, re.DOTALL)
-    return match.group(1).strip() if match else ""
+    st.header("アドバイザー情報")
+    my_name = st.text_input("あなたの氏名", placeholder="山田太郎")
 
 # ==========================================
 # 画面A：求職者ランク判定
@@ -105,7 +103,6 @@ if app_mode == "1. 求職者ランク判定":
         age = st.number_input("年齢", 18, 65, 25, key="rank_age")
         job_changes = st.number_input("転職回数", 0, 15, 1)
         short_term = st.number_input("短期離職数", 0, 10, 0)
-        st.header("🏢 志望企業情報")
         target_industry = st.text_input("志望業種", placeholder="例：IT・Web業界")
         target_job = st.text_input("志望職種", placeholder="例：エンジニア")
 
@@ -117,32 +114,34 @@ if app_mode == "1. 求職者ランク判定":
         uploaded_files = st.file_uploader("資料を添付 (PDF/TXT)", accept_multiple_files=True, type=['txt', 'pdf'])
 
     if st.button("分析を開始する", type="primary"):
-        with st.spinner("AI Engine ディープスキャン中..."):
+        with st.spinner("AI Engine スキャン中..."):
             try:
                 safe_ind = target_industry if target_industry else "全業種"
                 safe_job = target_job if target_job else "職種全般"
-                file_contents = read_files(uploaded_files)
-                
-                prompt = f"""あなたはプロの厳格なキャリアアドバイザーです。
-【{safe_ind}】の【{safe_job}】志望者を評価し、詳細分析の場合は事実に基づいた書類作成を行ってください。虚偽は一切厳禁です。
+                ai_score, pr_text, motive_text, letter_text = 5, "", "", ""
+                reason_disp = "簡易分析モードのため、AI評価は省略されています。"
+                advice_disp = "詳細は「通常分析」以上をご利用ください。"
 
-必ず以下の形式で出力してください。
+                if mode != "1. 簡易分析":
+                    file_contents = read_files(uploaded_files)
+                    prompt = f"""あなたはプロのキャリアアドバイザーです。
+【{safe_ind}】の【{safe_job}】志望者を事実に基づき評価と企業様がお会いしたくなるような書類作成してください。ただし自己PR、志望動機、推薦文は「」や・””などAIのような文章はさけてください。
+
 【点数】(0〜10の数字のみ)
-【評価理由】(具体的理由)
-【改善アドバイス】(具体的対策)
-【自己PR例】(事実ベースで400字程度。詳細分析時のみ)
-【志望動機例】(事実ベースで450字程度。詳細分析時のみ)
-【推薦文】(詳細分析時のみ。メール口調で作成)
+【評価理由】
+【改善アドバイス】
+【自己PR例】(事実ベース400字程度)
+【志望動機例】(事実ベース450字程度)
+【推薦文】(メール形式。署名：株式会社ライフアップ {my_name})
 
 ---
-アドバイザー：株式会社ライフアップ {my_name}
 実績：{achievement_text}\n資料：{file_contents}"""
+                    response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+                    full = response.text
+                    ai_score = int(re.search(r'【点数】\s*(\d+)', full).group(1)) if re.search(r'【点数】\s*(\d+)', full) else 5
+                    reason_disp, advice_disp = get_section('評価理由', full), get_section('改善アドバイス', full)
+                    pr_text, motive_text, letter_text = get_section('自己PR例', full), get_section('志望動機例', full), get_section('推薦文', full)
 
-                response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
-                full = response.text
-                
-                ai_score = int(re.search(r'【点数】\s*(\d+)', full).group(1)) if re.search(r'【点数】\s*(\d+)', full) else 5
-                
                 total_score = (5 if 22<=age<=35 else 0) + (5 if job_changes<=2 else 0) + ai_score - (short_term * 4)
                 if total_score >= 18: cn, rc = "優秀 (Class-S)", "#00ff00"
                 elif total_score >= 15: cn, rc = "良好 (Class-A)", "#00e5ff"
@@ -150,34 +149,29 @@ if app_mode == "1. 求職者ランク判定":
                 elif total_score >= 9: cn, rc = "要努力 (Class-C)", "#ff9900"
                 else: cn, rc = "厳しい (Class-D)", "#ff0000"
 
-                # 演出
-                st.toast("成功しました", icon="🤖")
+                st.toast("スキャン完了：成功しました")
                 flash_id = str(time.time())
                 st.markdown(f'<div id="f-{flash_id}" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,229,255,0.4);z-index:9999;pointer-events:none;animation:flash-fade 0.7s forwards;"></div>', unsafe_allow_html=True)
-
                 st.markdown('<div class="cyber-panel scan-effect">', unsafe_allow_html=True)
-                st.markdown(f"### 総合評価: <span style='color:{rc}'>{cn}</span>", unsafe_allow_html=True)
+                st.markdown(f"### 評価: <span style='color:{rc}'>{cn}</span>", unsafe_allow_html=True)
                 st.progress(max(0.0, min(total_score / 20.0, 1.0)))
-                
                 c1, c2, c3 = st.columns(3)
                 c1.metric("👤 基本情報", f"{(5 if 22<=age<=35 else 0) + (5 if job_changes<=2 else 0)} pt")
-                c2.metric("🤖 AI 実績", f"{ai_score} pt")
+                c2.metric("🤖 AIスコア", f"{ai_score} pt")
                 c3.metric("⚠️ リスク", f"-{short_term * 4} pt", delta_color="inverse")
-                
                 st.divider()
-                st.markdown(f"#### 📝 AI 評価理由\n<div class='fb-box'>{get_section('評価理由', full)}</div>", unsafe_allow_html=True)
-                st.markdown(f"#### 💡 改善アドバイス\n<div class='fb-box' style='border-left-color:#00ff00;'>{get_section('改善アドバイス', full)}</div>", unsafe_allow_html=True)
-                
+                st.markdown(f"#### 📝 評価理由\n<div class='fb-box'>{reason_disp}</div>", unsafe_allow_html=True)
+                st.markdown(f"#### 💡 アドバイス\n<div class='fb-box' style='border-left-color:#00ff00;'>{advice_disp}</div>", unsafe_allow_html=True)
                 if mode == "3. 詳細分析（書類作成あり）":
-                    st.subheader("📄 生成された応募書類")
-                    st.caption("自己PR (約400字)")
-                    st.code(get_section("自己PR例", full), language="text")
-                    st.caption("志望動機 (約450字)")
-                    st.code(get_section("志望動機例", full), language="text")
-                    st.caption("企業様向け推薦メール")
-                    st.code(get_section("推薦文", full), language="text")
+                    st.subheader("📄 応募書類案 (コピー可)")
+                    st.caption("自己PR (約400字)"); st.code(pr_text, language="text")
+                    st.caption("志望動機 (約450字)"); st.code(motive_text, language="text")
+                    st.caption("推薦メール"); st.code(letter_text, language="text")
                 st.markdown("</div>", unsafe_allow_html=True)
-            except Exception as e: st.error(f"❌ エラー: {e}")
+            except Exception as e:
+                # ★エラーガード：429エラーを日本語で表示
+                if "429" in str(e): st.error("⚠️ 【利用制限】無料枠の上限に達しました（1日20回）。30秒ほど待つか、明日再度お試しください。")
+                else: st.error(f"❌ 解析エラー: {e}")
 
 # ==========================================
 # 画面B：マッチング分析
@@ -198,49 +192,38 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
     else:
         col1, col2 = st.columns(2)
         with col1:
-            c_txt = st.text_area("企業要件", height=150, placeholder="募集要項など")
+            c_txt = st.text_area("企業要件", height=150)
             c_files = st.file_uploader("企業資料", accept_multiple_files=True, type=['txt', 'pdf'], key="cf")
         with col2:
-            s_txt = st.text_area("求職者情報", height=150, placeholder="経歴や面談メモ")
+            s_txt = st.text_area("求職者情報", height=150)
             s_files = st.file_uploader("求職者資料", accept_multiple_files=True, type=['txt', 'pdf'], key="sf")
 
     if st.button("マッチング分析を実行", type="primary"):
-        with st.spinner("AIが相性を解析中..."):
+        with st.spinner("Analyzing..."):
             try:
                 cfc, sfc = read_files(c_files), read_files(s_files)
-                if m_mode == "1. 簡易マッチング":
-                    prompt = f"ヘッドハンターとして、{m_age}歳、志望業種:{m_ind}(経験:{m_ei})、志望職種:{m_job}(経験:{m_ej})の内定可能性を100点満点で判定して。【マッチ度】【評価理由】【面接突破戦略】の形式で答えて。"
-                else:
-                    prompt = f"""凄腕ヘッドハンターとしてマッチング分析を行い、推薦メールを作成してください。
-メールは「○○会社採用ご担当者様 お世話になっております。株式会社ライフアップの{my_name}です。」から開始。事実に忠実に作成。
-
-【マッチ度】(数字のみ)
-【評価理由】
-【面接突破戦略】
-【推薦文】
+                prompt = f"""凄腕ヘッドハンターとして相性を判定し、応募先企業が面接をしたくなるような推薦メールを作成してください。その際転職回数や短期離職など書類選考にマイナスな内容があれば払拭も事実を元にしてください署名：株式会社ライフアップ {my_name}
+【マッチ度】(数字)\n【評価理由】\n【面接突破戦略】\n【推薦文】
 ---
-企業：{c_txt}\n{cfc}\n求職者：{s_txt}\n{sfc}"""
-
+{m_age if m_mode=="1. 簡易マッチング" else ""}\n企業：{c_txt}{cfc}\n求職者：{s_txt}{sfc}"""
                 response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
-                full = response.text
-                ms = int(re.search(r'【マッチ度】\s*(\d+)', full).group(1)) if re.search(r'【マッチ度】\s*(\d+)', full) else 50
-                
-                st.toast("解析完了", icon="🤖")
+                full_m = response.text
+                ms = int(re.search(r'【マッチ度】\s*(\d+)', full_m).group(1)) if re.search(r'【マッチ度】\s*(\d+)', full_m) else 50
+                st.toast("解析完了：成功しました")
                 flash_id = str(time.time())
                 st.markdown(f'<div id="f-{flash_id}" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,229,255,0.4);z-index:9999;pointer-events:none;animation:flash-fade 0.7s forwards;"></div>', unsafe_allow_html=True)
-
-                st.markdown('<div class="cyber-panel scan-effect">', unsafe_allow_html=True)
-                st.subheader(f"マッチ判定スコア: {ms} / 100")
-                st.progress(ms / 100)
-                st.divider()
-                st.markdown(f"#### ⚖️ マッチング評価理由\n<div class='fb-box'>{get_section('評価理由', full)}</div>", unsafe_allow_html=True)
-                st.markdown(f"#### ⚔️ 面接突破・推薦戦略\n<div class='fb-box' style='border-left-color:#00ff00;'>{get_section('面接突破戦略', full)}</div>", unsafe_allow_html=True)
-                
+                st.markdown('<div class="cyber-panel">', unsafe_allow_html=True)
+                st.subheader(f"判定: {ms}/100"); st.progress(ms / 100)
+                st.markdown(f"**理由:** {get_section('評価理由', full_m)}")
+                st.markdown(f"**戦略:** {get_section('面接突破戦略', full_m)}")
                 if m_mode == "2. 詳細マッチング（推薦文あり）":
-                    st.subheader("📧 企業様向け推薦メール")
-                    st.code(get_section("推薦文", full), language="text")
+                    st.subheader("📧 推薦メール案"); st.code(get_section("推薦文", full_m), language="text")
                 st.markdown("</div>", unsafe_allow_html=True)
-            except Exception as e: st.error(f"❌ 解析エラー: {e}")
+            except Exception as e:
+                # ★ここにもエラーガードを追加
+                if "429" in str(e): st.error("⚠️ 【利用制限】上限に達しました。30秒ほど待ってから再試行してください。")
+                else: st.error(f"❌ 解析エラー: {e}")
+
 
 
 
