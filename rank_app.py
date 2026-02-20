@@ -178,7 +178,8 @@ if app_mode == "1. 求職者ランク判定":
                 elif total_score >= 18: cn, rc = "良好 (Class-A)", "#00e5ff"
                 elif total_score >= 13: cn, rc = "標準 (Class-B)", "#ffff00"
                 elif total_score >= 8: cn, rc = "要努力 (Class-C)", "#ff9900"
-                else: cn, rc = "厳しい (Class-D)", "#ff0000"
+                elif total_score >= 5: cn, rc = "厳しい (Class-D)", "#ff0000"
+                else: cn, rc = "測定不能 (Class-Z)", "#ff0000"
 
                 st.toast("スキャン完了：成功しました")
                 flash_id = str(time.time())
@@ -202,7 +203,9 @@ if app_mode == "1. 求職者ランク判定":
                 # ★追加：エージェント向け指示（ランク判定版）
                 if total_score >= 15:
                     st.success("NICE **【エージェント指示】** 優先度：高　市場価値が高い人材です。早期の内定獲得を狙いましょう。")
-                elif total_score < 12:
+                elif total_score < 14:
+                    st.error("safe **【エージェント指示】** 優先度：中　あなたの腕の見せ所です。紹介企業や書類作成によって内定の可能性はあります。")
+                elif total_score < 7:
                     st.error("🚨 **【エージェント指示】** 優先度：低　キャリア形成に課題があります。長期戦を覚悟するか、ターゲットの再考が必要です。")
                     
                 st.divider()
@@ -281,6 +284,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 # ★ここにもエラーガードを追加
                 if "429" in str(e): st.error("⚠️ 【利用制限】上限に達しました。30秒ほど待ってから再試行してください。")
                 else: st.error(f"❌ 解析エラー: {e}")
+
 
 
 
