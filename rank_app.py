@@ -162,7 +162,7 @@ if app_mode == "1. 求職者ランク判定":
                 else: r, cn, rc = "Z", "測定不能 (Error)", "#888888"
 
                 # --- 閃きと成功のデジタル演出 ---
-                st.toast("✅ スキャン完了：高精度レポートを生成しました", icon="🚀")
+                st.toast("スキャン完了：成功しました", icon="🤖")
                 st.markdown("<script>window.parent.document.querySelector('.stApp').style.animation = 'flash 0.6s ease-out';</script>", unsafe_allow_html=True)
                 st.markdown("<style>.stApp { animation: flash 0.6s ease-out; }</style>", unsafe_allow_html=True)
 
@@ -243,7 +243,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 else: r, cn, rc = "D", "ミスマッチの可能性大 (39%-)", "#ff0000"
 
                 # --- 閃きと成功のデジタル演出 ---
-                st.toast("✅ 解析完了：最適な戦略を算出しました", icon="🎯")
+                st.toast("解析完了：成功しました", icon="🤖")
                 st.markdown("<style>.stApp { animation: flash 0.6s ease-out; }</style>", unsafe_allow_html=True)
 
                 st.markdown('<div class="cyber-panel scan-effect">', unsafe_allow_html=True)
@@ -259,5 +259,6 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 elif ms < 50: st.error("🚨 **【エージェント向け】** 優先度：低。慎重なフォローが必要です。")
                 st.markdown("</div>", unsafe_allow_html=True)
             except Exception as e: st.error(f"❌ 解析中にエラーが発生しました: {e}")
+
 
 
