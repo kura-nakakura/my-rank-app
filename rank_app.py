@@ -2,6 +2,7 @@ import streamlit as st
 from google import genai
 import re
 from pypdf import PdfReader
+import time # ★追加：エフェクトのタイミング制御用
 
 # ==========================================
 # 🎨 デザイン定義（サイバー×エネルギッシュ）
@@ -12,11 +13,6 @@ st.markdown("""
         background-color: #0A192F;
         background-image: linear-gradient(rgba(10, 25, 47, 0.9), rgba(10, 25, 47, 0.9)),
                           url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300e5ff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    }
-    /* 解析完了時の閃光エフェクト */
-    @keyframes flash {
-        0% { background-color: rgba(0, 229, 255, 0.4); }
-        100% { background-color: transparent; }
     }
     .cyber-panel {
         background: rgba(23, 42, 70, 0.7);
@@ -29,7 +25,6 @@ st.markdown("""
         position: relative;
         overflow: hidden;
     }
-    /* パネル内のスキャン線アニメーション */
     .scan-effect::before {
         content: '';
         position: absolute;
@@ -40,6 +35,13 @@ st.markdown("""
         pointer-events: none;
     }
     @keyframes scan { 0% { top: -150%; } 100% { top: 150%; } }
+    
+    /* 閃光エフェクトの定義 */
+    @keyframes flash-fade {
+        0% { opacity: 1; }
+        100% { opacity: 0; }
+    }
+
     [data-testid="stMetricValue"] {
         font-size: 2rem !important;
         color: #00E5FF !important;
@@ -63,7 +65,7 @@ def check_password():
         st.session_state.password_correct = False
     if st.session_state.password_correct: return True
 
-    st.title("システムログイン")
+    st.title("🔐 システムログイン")
     pwd = st.text_input("アクセスコードを入力してください", type="password")
     if st.button("ログイン", type="primary"):
         if pwd == LOGIN_PASSWORD:
@@ -93,12 +95,12 @@ def read_files(files):
 
 # --- 2. AIクライアント設定 ---
 # Gemini 2.5 Flashはコスト効率が良く、価格とパフォーマンスのバランスが最適化されています
-# また、思考機能（推論プロセス）を搭載しているため、精度の高い分析が可能です
+# また、思考機能を搭載しているため、精度の高い分析が可能です
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 st.set_page_config(page_title="AIエージェントシステム", page_icon="🤖", layout="wide")
 
 # ==========================================
-# 🎛️ メインメニュー（サイドバー）
+# 🎛️ メインメニュー
 # ==========================================
 with st.sidebar:
     st.markdown("### 🎛️ メインメニュー")
@@ -109,7 +111,7 @@ with st.sidebar:
 # 画面A：求職者ランク判定
 # ==========================================
 if app_mode == "1. 求職者ランク判定":
-    st.title("📉 求職者ランク判定プロ")
+    st.title("📈 求職者ランク判定プロ")
     mode = st.radio("分析モードを選択してください", ["1. 簡易分析", "2. 通常分析（実績AI判定あり）", "3. 詳細分析（資料添付あり）"], horizontal=True)
 
     with st.sidebar:
@@ -129,7 +131,7 @@ if app_mode == "1. 求職者ランク判定":
         achievement_text = st.text_area("追加の実績・補足事項（任意）", height=100)
         uploaded_files = st.file_uploader("資料を添付 (PDF/TXT)", accept_multiple_files=True, type=['txt', 'pdf'])
 
-    if st.button("分析を開始する", type="primary"):
+    if st.button("🔥 分析を開始する", type="primary"):
         with st.spinner("AIがデータをディープスキャン中..."):
             try:
                 safe_ind = target_industry if target_industry else "全業種"
@@ -138,7 +140,7 @@ if app_mode == "1. 求職者ランク判定":
                 
                 if mode != "1. 簡易分析":
                     file_contents = read_files(uploaded_files)
-                    prompt = f"""あなたはプロの厳格なキャリアアドバイザーです。【{safe_ind}】の【{safe_job}】志望者の市場価値を10点満点で厳しく採点してください。
+                    prompt = f"""あなたはプロの厳格なキャリアアドバイザーです。【{safe_ind}】の【{safe_job}】志望者の市場価値を10点満点で採点してください。
 【点数】(0〜10の数字のみ)
 【評価理由】(具体的理由)
 【改善アドバイス】(面接や書類の具体的な改善点)
@@ -161,10 +163,12 @@ if app_mode == "1. 求職者ランク判定":
                 elif total_score >= 5: r, cn, rc = "D", "厳しい (Class-D)", "#ff0000"
                 else: r, cn, rc = "Z", "測定不能 (Error)", "#888888"
 
-                # --- 閃きと成功のデジタル演出 ---
-                st.toast("スキャン完了：成功しました", icon="🤖")
-                st.markdown("<script>window.parent.document.querySelector('.stApp').style.animation = 'flash 0.6s ease-out';</script>", unsafe_allow_html=True)
-                st.markdown("<style>.stApp { animation: flash 0.6s ease-out; }</style>", unsafe_allow_html=True)
+                # --- 閃光＆トースト演出（確実発動版） ---
+                st.toast("✅ スキャン完了：高精度レポートを生成しました", icon="🚀")
+                flash_id = str(time.time())
+                st.markdown(f"""
+                    <div id="f-{flash_id}" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background-color:rgba(0,229,255,0.5); z-index:9999; pointer-events:none; animation:flash-fade 0.7s ease-out forwards;"></div>
+                """, unsafe_allow_html=True)
 
                 st.markdown(f"""
                 <div style="background-color: rgba(0, 229, 255, 0.2); padding: 10px; border-radius: 5px; border-left: 5px solid #00E5FF;">
@@ -173,7 +177,7 @@ if app_mode == "1. 求職者ランク判定":
                 """, unsafe_allow_html=True)
                 
                 st.markdown('<div class="cyber-panel scan-effect">', unsafe_allow_html=True)
-                st.markdown("## 📃 AI キャリア分析レポート")
+                st.markdown("## 📊 AI キャリア分析レポート")
                 st.markdown(f"<div style='display:flex; align-items:center;'><div style='width:22px; height:22px; border-radius:50%; background:{rc}; box-shadow:0 0 20px {rc}; margin-right:15px;'></div><h3 style='color:{rc}; text-shadow:0 0 15px {rc}; margin:0;'>総合評価: {cn}</h3></div>", unsafe_allow_html=True)
                 st.progress(max(0, min(total_score / 20, 1.0)))
                 
@@ -191,10 +195,10 @@ if app_mode == "1. 求職者ランク判定":
                 st.download_button("📥 レポートをダウンロード (TXT)", report, f"report_{r}.txt")
                 st.markdown("</div>", unsafe_allow_html=True)
 
-            except Exception as e: st.error(f"❌ 分析中にエラーが発生しました: {e}")
+            except Exception as e: st.error(f"❌ 解析エラー: {e}")
 
 # ==========================================
-# 画面B：企業×求職者 マッチング分析
+# 画面B：マッチング分析
 # ==========================================
 elif app_mode == "2. 企業×求職者 マッチング分析":
     st.title("🤝 企業×求職者 マッチング分析")
@@ -221,7 +225,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
             s_text = st.text_area("経歴・スキル・面談メモ", height=150)
             s_files = st.file_uploader("履歴書などを添付", accept_multiple_files=True, type=['txt', 'pdf'], key="sf")
 
-    if st.button("マッチング分析を実行", type="primary"):
+    if st.button("✨ マッチング分析を実行", type="primary"):
         with st.spinner("AIが相性を解析中..."):
             try:
                 if m_mode == "1. 簡易マッチング（基本情報・経験のみ）":
@@ -242,9 +246,12 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 elif ms >= 40: r, cn, rc = "C", "懸念あり (40%+)", "#ff9900"
                 else: r, cn, rc = "D", "ミスマッチの可能性大 (39%-)", "#ff0000"
 
-                # --- 閃きと成功のデジタル演出 ---
-                st.toast("解析完了：成功しました", icon="🤖")
-                st.markdown("<style>.stApp { animation: flash 0.6s ease-out; }</style>", unsafe_allow_html=True)
+                # --- 閃光＆トースト演出（確実発動版） ---
+                st.toast("✅ 解析完了：最適な戦略を算出しました", icon="🎯")
+                flash_id = str(time.time())
+                st.markdown(f"""
+                    <div id="f-{flash_id}" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background-color:rgba(0,229,255,0.5); z-index:9999; pointer-events:none; animation:flash-fade 0.7s ease-out forwards;"></div>
+                """, unsafe_allow_html=True)
 
                 st.markdown('<div class="cyber-panel scan-effect">', unsafe_allow_html=True)
                 st.markdown("## 🎯 AI マッチング解析レポート")
@@ -258,7 +265,6 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 if ms >= 75: st.success("🔥 **【エージェント向け】** 優先度：高！すぐ推薦しましょう！")
                 elif ms < 50: st.error("🚨 **【エージェント向け】** 優先度：低。慎重なフォローが必要です。")
                 st.markdown("</div>", unsafe_allow_html=True)
-            except Exception as e: st.error(f"❌ 解析中にエラーが発生しました: {e}")
-
+            except Exception as e: st.error(f"❌ 解析エラー: {e}")
 
 
