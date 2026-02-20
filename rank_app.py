@@ -87,7 +87,7 @@ if st.button("分析を開始する"):
                 
                 # ★新しいライブラリでのAI実行処理
                 response = client.models.generate_content(
-                    model='gemini-1.5-flash',
+                    model='gemini-2.5-flash',
                     contents=prompt
                 )
                 
@@ -128,6 +128,7 @@ if st.button("分析を開始する"):
 
         except Exception as e:
             st.error(f"エラーが発生しました。設定を確認してください：{e}")
+
 
 
 
