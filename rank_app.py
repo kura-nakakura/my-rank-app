@@ -26,12 +26,8 @@ if not check_password():
     st.stop()
 
 # --- 2. AIの設定 ---
-# ★注意: テスト用にそのままにしていますが、APIキーの直書きはセキュリティ上危険です。
-# 動作確認が終わったら Streamlit の secrets.toml での管理に切り替えることをおすすめします。
-API_KEY = "AIzaSyB_1CYpl577VSsKZ7s-pvGmw-CJvMwV7b8"
-client = genai.Client(api_key=API_KEY)  # ★新しいクライアント初期化方法
-API_KEY = "AIzaSy...（あなたのキー）"
-client = genai.Client(api_key=API_KEY)
+# st.secrets を使って、隠された場所からキーを呼び出します
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 # 以下の1行を一時的に追加
 print("今のAPIキーの最初の10文字:", API_KEY[:10])
@@ -128,6 +124,7 @@ if st.button("分析を開始する"):
 
         except Exception as e:
             st.error(f"エラーが発生しました。設定を確認してください：{e}")
+
 
 
 
