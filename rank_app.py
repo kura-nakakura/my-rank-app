@@ -140,7 +140,7 @@ if st.button("分析を開始する", type="primary"):
                 
                 # 安定して動作する最新モデル（gemini-2.0-flash）を指定
                 response = client.models.generate_content(
-                    model='gemini-2.0-flash',
+                    model='gemini-2.5-flash',
                     contents=prompt
                 )
                 
@@ -234,6 +234,7 @@ if st.button("分析を開始する", type="primary"):
 
         except Exception as e:
             st.error(f"❌ 分析中にエラーが発生しました: {e}")
+
 
 
 
