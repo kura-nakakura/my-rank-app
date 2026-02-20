@@ -46,7 +46,7 @@ LOGIN_PASSWORD = "HR9237"
 def check_password():
     if "password_correct" not in st.session_state: st.session_state.password_correct = False
     if st.session_state.password_correct: return True
-    st.title("🔐 システムログイン")
+    st.title("システムログイン")
     pwd = st.text_input("アクセスコード", type="password")
     if st.button("ログイン"):
         if pwd == LOGIN_PASSWORD:
@@ -87,7 +87,7 @@ with st.sidebar:
 # 画面A：求職者ランク判定
 # ==========================================
 if app_mode == "1. 求職者ランク判定":
-    st.title("📈 求職者ランク判定プロ")
+    st.title("求職者ランク判定プロ")
     mode = st.radio("モード", ["1. 簡易", "2. 通常", "3. 詳細(書類作成あり)"], horizontal=True)
 
     with st.sidebar:
@@ -104,7 +104,7 @@ if app_mode == "1. 求職者ランク判定":
         ach_txt = st.text_area("補足(面談メモなど)", height=100)
         up_files = st.file_uploader("資料添付 (PDF/TXT)", accept_multiple_files=True, type=['txt', 'pdf'])
 
-    if st.button("🔥 分析を開始する", type="primary"):
+    if st.button("分析を開始する", type="primary"):
         with st.spinner("AI Engine Scanning..."):
             try:
                 ai_score, reason_text, advice_text, pr_text, motive_text, letter_text = 5, "", "", "", "", ""
@@ -148,7 +148,7 @@ if app_mode == "1. 求職者ランク判定":
                 else: cn, rc = "厳しい (Class-D)", "#ff0000"
 
                 # 演出
-                st.toast("✅ 解析完了", icon="🚀")
+                st.toast("解析完了", icon="🤖")
                 st.markdown(f'<div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,229,255,0.4);z-index:9999;pointer-events:none;animation:flash-fade 0.7s forwards;"></div>', unsafe_allow_html=True)
                 
                 st.markdown('<div class="cyber-panel scan-effect">', unsafe_allow_html=True)
@@ -172,7 +172,7 @@ if app_mode == "1. 求職者ランク判定":
 # 画面B：マッチング分析
 # ==========================================
 elif app_mode == "2. 企業×求職者 マッチング分析":
-    st.title("🤝 企業×求職者 マッチング分析")
+    st.title("企業×求職者 マッチング分析")
     m_mode = st.radio("モード", ["1. 簡易", "2. 詳細(推薦文あり)"], horizontal=True)
 
     c_txt, c_files, s_txt, s_files = "", [], "", []
@@ -185,7 +185,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
             s_txt = st.text_area("求職者メモ", height=150)
             s_files = st.file_uploader("求職者資料", accept_multiple_files=True, type=['txt', 'pdf'], key="sf")
 
-    if st.button("✨ 分析を実行", type="primary"):
+    if st.button("分析を実行", type="primary"):
         with st.spinner("Analyzing Match..."):
             try:
                 cfc, sfc = read_files(c_files), read_files(s_files)
@@ -209,7 +209,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                     if len(parts) > 1: return parts[1].split("【")[0].strip()
                     return ""
 
-                st.toast("✅ 解析完了", icon="🎯")
+                st.toast("解析完了", icon="🤖")
                 st.markdown(f'<div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,229,255,0.4);z-index:9999;pointer-events:none;animation:flash-fade 0.7s forwards;"></div>', unsafe_allow_html=True)
 
                 st.markdown('<div class="cyber-panel">', unsafe_allow_html=True)
@@ -223,6 +223,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                     st.code(get_section("推薦文", full), language="text")
                 st.markdown("</div>", unsafe_allow_html=True)
             except Exception as e: st.error(f"Error: {e}")
+
 
 
 
