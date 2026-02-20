@@ -159,6 +159,13 @@ if app_mode == "1. 求職者ランク判定":
                 c1.metric("👤 基本情報", f"{(5 if 22<=age<=35 else 0) + (5 if job_changes<=2 else 0)} pt")
                 c2.metric("🤖 AIスコア", f"{ai_score} pt")
                 c3.metric("⚠️ リスク", f"-{short_term * 4} pt", delta_color="inverse")
+
+                # ★追加：エージェント向け指示（ランク判定版）
+                if total_score >= 15:
+                    st.success("🔥 **【エージェント指示】** 優先度：高！市場価値が高い人材です。早期の内定獲得を狙いましょう。")
+                elif total_score < 12:
+                    st.error("🚨 **【エージェント指示】** 優先度：低。キャリア形成に課題があります。長期戦を覚悟するか、ターゲットの再考が必要です。")
+                    
                 st.divider()
                 st.markdown(f"#### 📝 評価理由\n<div class='fb-box'>{reason_disp}</div>", unsafe_allow_html=True)
                 st.markdown(f"#### 💡 アドバイス\n<div class='fb-box' style='border-left-color:#00ff00;'>{advice_disp}</div>", unsafe_allow_html=True)
@@ -223,6 +230,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 # ★ここにもエラーガードを追加
                 if "429" in str(e): st.error("⚠️ 【利用制限】上限に達しました。30秒ほど待ってから再試行してください。")
                 else: st.error(f"❌ 解析エラー: {e}")
+
 
 
 
