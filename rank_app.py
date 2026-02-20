@@ -81,7 +81,7 @@ with st.sidebar:
     app_mode = st.radio("ツール選択", ["1. 求職者ランク判定", "2. 企業×求職者 マッチング分析"])
     st.divider()
     st.header("✍️ あなたの情報")
-    my_name = st.text_input("アドバイザー氏名", value="山田 太郎")
+    my_name = st.text_input("アドバイザー氏名", placeholder="山田")
 
 # ==========================================
 # 画面A：求職者ランク判定
@@ -223,6 +223,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                     st.code(get_section("推薦文", full), language="text")
                 st.markdown("</div>", unsafe_allow_html=True)
             except Exception as e: st.error(f"Error: {e}")
+
 
 
 
