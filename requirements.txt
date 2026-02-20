@@ -1,3 +1,3 @@
 streamlit
 google-genai
-# （その他に使っているライブラリがあれば残しておいてOKです）
+pypdf
