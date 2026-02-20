@@ -95,7 +95,7 @@ if app_mode == "1. 求職者ランク判定":
 
     with st.sidebar:
         st.header(":bust_in_silhouette: 基本情報入力")
-        age = st.number_input("年齢", 18, 65, 25)
+        age = st.number_input("年齢", 18, 65, 25, key="rank_age")
         job_changes = st.number_input("転職回数", 0, 15, 1)
         short_term = st.number_input("短期離職数", 0, 10, 0)
         
@@ -180,22 +180,79 @@ if app_mode == "1. 求職者ランク判定":
 # ==========================================
 elif app_mode == "2. 企業×求職者 マッチング分析":
     st.title("🤝 企業×求職者 マッチング分析")
-    st.markdown("企業の募集要件と求職者のスキル・志向性をAIが比較し、相性を100点満点で判定します。")
+    
+    # ★追加：マッチング機能内の2つのモード切り替え
+    match_mode = st.radio(
+        "分析モードを選択してください",
+        ["1. 簡易マッチング（基本情報・経験のみ）", "2. 詳細マッチング（資料・詳細テキストあり）"],
+        horizontal=True
+    )
+    st.markdown("---")
 
-    col_corp, col_seeker = st.columns(2)
-    with col_corp:
-        st.subheader("🏢 企業側の要件")
-        company_info = st.text_area("募集要項・求める人物像・社風など", height=200, placeholder="例：Python経験3年以上。自走力があり、アジャイル開発に慣れている方を希望。")
-    with col_seeker:
-        st.subheader("👤 求職者側の情報")
-        seeker_info = st.text_area("経歴・スキル・面談での印象など", height=200, placeholder="例：バックエンドエンジニア歴4年。受け身な性格だが、技術力は高い。")
+    # 変数の初期化
+    m_age = 25
+    m_target_industry = ""
+    m_target_job = ""
+    m_exp_industry = "なし"
+    m_exp_job = "なし"
+    company_text = ""
+    company_files = []
+    seeker_text = ""
+    seeker_files = []
+
+    # --- モード別のUI表示 ---
+    if match_mode == "1. 簡易マッチング（基本情報・経験のみ）":
+        st.markdown("#### 👤 求職者の基本情報と経験")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            m_age = st.number_input("年齢", 18, 65, 25, key="match_age")
+        with col2:
+            m_target_industry = st.text_input("志望業種", value="IT/Web業界", key="match_ind")
+            m_exp_industry = st.radio("業種経験", ["あり", "なし"], index=1, horizontal=True)
+        with col3:
+            m_target_job = st.text_input("志望職種", value="エンジニア", key="match_job")
+            m_exp_job = st.radio("職種経験", ["あり", "なし"], index=1, horizontal=True)
+
+    elif match_mode == "2. 詳細マッチング（資料・詳細テキストあり）":
+        st.info("💡 企業・求職者それぞれの情報（文章入力、またはテキストファイルの添付）を行ってください。両方組み合わせることも可能です。")
+        col_corp, col_seeker = st.columns(2)
+        with col_corp:
+            st.subheader("🏢 企業側の情報")
+            company_text = st.text_area("募集要項・求める人物像（文章入力）", height=150)
+            company_files = st.file_uploader("企業資料を添付（複数可・txt形式）", accept_multiple_files=True, type=['txt'], key="c_files")
+        with col_seeker:
+            st.subheader("👤 求職者側の情報")
+            seeker_text = st.text_area("経歴・スキル・面談メモ（文章入力）", height=150)
+            seeker_files = st.file_uploader("履歴書・職務経歴書・面談文字起こし（複数可・txt形式）", accept_multiple_files=True, type=['txt'], key="s_files")
 
     if st.button("マッチング分析を実行", type="primary"):
-        if not company_info or not seeker_info:
-            st.warning("企業情報と求職者情報の両方を入力してください。")
-        else:
-            with st.spinner("AIがカルチャーフィットとスキルギャップを解析中..."):
-                try:
+        with st.spinner("AIがカルチャーフィットとスキルギャップを解析中..."):
+            try:
+                # --- モード別のAIプロンプト生成 ---
+                if match_mode == "1. 簡易マッチング（基本情報・経験のみ）":
+                    match_prompt = f"""あなたは凄腕のヘッドハンターです。
+以下の求職者の基本情報をもとに、一般的な市場における【{m_target_industry}】の【{m_target_job}】へのマッチング度（相性・内定獲得の可能性）を100点満点で推測・判定してください。
+
+【求職者情報】
+・年齢: {m_age}歳
+・志望業種: {m_target_industry} （経験: {m_exp_industry}）
+・志望職種: {m_target_job} （経験: {m_exp_job}）
+
+必ず以下のフォーマットで出力してください。
+
+【マッチ度】
+(0〜100の数字のみ)
+
+【評価理由】
+(年齢や経験の有無から推測される、この業界・職種への転職ハードルやポテンシャルの評価)
+
+【面接突破戦略】
+(未経験の場合はどうポテンシャルをアピールすべきか、経験者の場合はどう即戦力性を伝えるべきかの簡単なアドバイス)
+"""
+                else: # 詳細マッチング
+                    c_file_content = "".join([f.getvalue().decode("utf-8") + "\n" for f in company_files]) if company_files else ""
+                    s_file_content = "".join([f.getvalue().decode("utf-8") + "\n" for f in seeker_files]) if seeker_files else ""
+                    
                     match_prompt = f"""あなたは凄腕のヘッドハンターです。以下の【企業の要件】と【求職者の情報】を深く比較し、マッチング度（相性）を100点満点で判定してください。
 必ず以下のフォーマットで出力してください。
 
@@ -206,61 +263,69 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
 (なぜそのマッチ度なのか。スキル要件の合致度、カルチャーフィット、懸念点などを具体的に)
 
 【面接突破戦略】
-(この求職者が面接を通過するためには、どの経験をアピールし、どの弱点をどうカバーすべきか)
+(この求職者が面接を通過するためには、履歴書・職務経歴書のどこを修正すべきか、どの経験をアピールし、どの弱点をどうカバーすべきかの具体的な対策)
 
 ---
-【企業の要件】
-{company_info}
+【企業の要件（テキスト）】
+{company_text}
+【企業の要件（資料）】
+{c_file_content}
 
-【求職者の情報】
-{seeker_info}"""
+【求職者の情報（テキスト）】
+{seeker_text}
+【求職者の情報（資料）】
+{s_file_content}
+"""
 
-                    response = client.models.generate_content(model='gemini-2.5-flash', contents=match_prompt)
-                    full_text = response.text
-                    
-                    match_score = 50
-                    reason_text = ""
-                    strategy_text = ""
+                # AIへのリクエスト送信
+                response = client.models.generate_content(model='gemini-2.5-flash', contents=match_prompt)
+                full_text = response.text
+                
+                match_score = 50
+                reason_text = ""
+                strategy_text = ""
 
-                    if re.search(r'【マッチ度】\s*(\d+)', full_text):
-                        match_score = int(re.search(r'【マッチ度】\s*(\d+)', full_text).group(1))
-                    
-                    if "【評価理由】" in full_text and "【面接突破戦略】" in full_text:
-                        reason_text = full_text.split("【評価理由】")[1].split("【面接突破戦略】")[0].strip()
-                        strategy_text = full_text.split("【面接突破戦略】")[1].strip()
+                if re.search(r'【マッチ度】\s*(\d+)', full_text):
+                    match_score = int(re.search(r'【マッチ度】\s*(\d+)', full_text).group(1))
+                
+                if "【評価理由】" in full_text and "【面接突破戦略】" in full_text:
+                    reason_text = full_text.split("【評価理由】")[1].split("【面接突破戦略】")[0].strip()
+                    strategy_text = full_text.split("【面接突破戦略】")[1].strip()
 
-                    # マッチング度のランク分け
-                    if match_score >= 90: rank, color_name, rank_color = "S", "運命の出会い (Match 90%+)", "#00ff00"
-                    elif match_score >= 75: rank, color_name, rank_color = "A", "高確率で内定 (Match 75%+)", "#00e5ff"
-                    elif match_score >= 60: rank, color_name, rank_color = "B", "選考通過ライン (Match 60%+)", "#ffff00"
-                    elif match_score >= 40: rank, color_name, rank_color = "C", "懸念あり (Match 40%+)", "#ff9900"
-                    else: rank, color_name, rank_color = "D", "ミスマッチの可能性大 (Match 39%-)", "#ff0000"
+                # マッチング度のランク分け
+                if match_score >= 90: rank, color_name, rank_color = "S", "運命の出会い (Match 90%+)", "#00ff00"
+                elif match_score >= 75: rank, color_name, rank_color = "A", "高確率で内定 (Match 75%+)", "#00e5ff"
+                elif match_score >= 60: rank, color_name, rank_color = "B", "選考通過ライン (Match 60%+)", "#ffff00"
+                elif match_score >= 40: rank, color_name, rank_color = "C", "懸念あり (Match 40%+)", "#ff9900"
+                else: rank, color_name, rank_color = "D", "ミスマッチの可能性大 (Match 39%-)", "#ff0000"
 
-                    st.markdown('<div class="cyber-panel scan-effect">', unsafe_allow_html=True)
-                    st.markdown("## 🎯 AI マッチング解析レポート")
-                    
-                    st.markdown(f"""
-                    <div style='display: flex; align-items: center; margin-bottom: 15px;'>
-                        <div style='width: 22px; height: 22px; border-radius: 50%; background-color: {rank_color}; box-shadow: 0 0 20px {rank_color}, inset 0 0 8px rgba(255,255,255,0.6); margin-right: 15px;'></div>
-                        <h3 style='color: {rank_color}; text-shadow: 0 0 15px {rank_color}; margin: 0;'>判定: {color_name}</h3>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    st.progress(max(0, min(match_score / 100, 1.0)))
-                    st.caption(f"AI算出マッチングスコア: {match_score}点 / 100点")
-                    
-                    st.divider()
-                    st.markdown("#### ⚖️ マッチング評価理由")
-                    st.markdown(f'<div class="fb-box">{reason_text}</div>', unsafe_allow_html=True)
-                    st.markdown("#### ⚔️ 面接突破・推薦戦略")
-                    st.markdown(f'<div class="fb-box" style="border-left-color:#00ff00;">{strategy_text}</div>', unsafe_allow_html=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
+                # 🎨 画面への描画
+                st.markdown('<div class="cyber-panel scan-effect">', unsafe_allow_html=True)
+                st.markdown("## 🎯 AI マッチング解析レポート")
+                
+                st.markdown(f"""
+                <div style='display: flex; align-items: center; margin-bottom: 15px;'>
+                    <div style='width: 22px; height: 22px; border-radius: 50%; background-color: {rank_color}; box-shadow: 0 0 20px {rank_color}, inset 0 0 8px rgba(255,255,255,0.6); margin-right: 15px;'></div>
+                    <h3 style='color: {rank_color}; text-shadow: 0 0 15px {rank_color}; margin: 0;'>判定: {color_name}</h3>
+                </div>
+                """, unsafe_allow_html=True)
+                st.progress(max(0, min(match_score / 100, 1.0)))
+                st.caption(f"AI算出マッチングスコア: {match_score}点 / 100点")
+                
+                st.divider()
+                st.markdown("#### ⚖️ マッチング評価理由")
+                st.markdown(f'<div class="fb-box">{reason_text}</div>', unsafe_allow_html=True)
+                st.markdown("#### ⚔️ 面接突破・書類修正アドバイス")
+                st.markdown(f'<div class="fb-box" style="border-left-color:#00ff00;">{strategy_text}</div>', unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
 
-                    # エージェント向けアラート
-                    if match_score >= 75:
-                        st.success("🔥 **【エージェント指示】** 非常に高いマッチ度です！すぐに推薦状を作成し、面接対策のスケジュールを組んでください。")
-                    elif match_score < 50:
-                        st.error("🚨 **【エージェント指示】** ミスマッチの可能性が高いです。推薦する場合は、企業側に事前のフォローを入れるか、別案件の打診を検討してください。")
+                # エージェント向けアラート
+                if match_score >= 75:
+                    st.success("🔥 **【エージェント指示】** 非常に高いマッチ度です！すぐに推薦状を作成し、面接対策のスケジュールを組んでください。")
+                elif match_score < 50:
+                    st.error("🚨 **【エージェント指示】** ミスマッチの可能性が高いです。推薦する場合は、企業側に事前のフォローを入れるか、別案件の打診を検討してください。")
 
-                except Exception as e:
-                    st.error(f"❌ 解析中にエラーが発生しました: {e}")
+            except Exception as e:
+                st.error(f"❌ 解析中にエラーが発生しました: {e}")
+
 
