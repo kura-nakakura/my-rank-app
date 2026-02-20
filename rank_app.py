@@ -1,9 +1,9 @@
 import streamlit as st
-from google import genai  # ★旧 google.generativeai から新しいライブラリに変更
+from google import genai
 import re
 
 # --- 1. セキュリティ設定 ---
-# ログインパスワード（好きなものに変えてください）
+# ログインパスワード
 LOGIN_PASSWORD = "HR9237" 
 
 def check_password():
@@ -26,9 +26,8 @@ if not check_password():
     st.stop()
 
 # --- 2. AIの設定 ---
-# st.secrets を使って、隠された場所からキーを呼び出します
+# st.secrets を使って、隠された場所からキーを呼び出します（安全な状態です！）
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-
 
 st.set_page_config(page_title="プロ仕様・求職者ランク判定", page_icon=":chart_with_upwards_trend:")
 st.title(":chart_with_upwards_trend: 求職者ランク判定プロ")
@@ -66,22 +65,19 @@ if st.button("分析を開始する"):
             # モードに応じたAIプロンプト
             if mode != "1. 簡易分析（基本情報のみ）":
                 
-                # ★モード3：ファイルの中身を読み込んでAIに渡す処理を追加
                 file_contents = ""
                 if mode == "3. 詳細分析（資料添付あり）" and uploaded_files:
                     for file in uploaded_files:
                         if file.name.endswith('.txt'):
                             file_contents += file.getvalue().decode("utf-8") + "\n"
-                        # ※PDFを読み込む場合は別途 PyPDF2 などのライブラリの導入が必要です
 
                 if mode == "2. 通常分析（実績AI判定あり）":
                     prompt = f"キャリアアドバイザーとして以下の実績を厳しく10点満点で採点し、『点数：〇点』とだけ答えて。実績：{achievement_text}"
                 else:
                     prompt = f"資料と実績に基づき、求職者の市場価値を10点満点で採点し『点数：〇点』とだけ答えて。実績：{achievement_text}\n資料内容：\n{file_contents}"
                 
-                # ★新しいライブラリでのAI実行処理
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-1.5-flash',
                     contents=prompt
                 )
                 
@@ -98,30 +94,49 @@ if st.button("分析を開始する"):
 
             # --- 修正後のランク判定ロジック ---
             if total_score >= 18: 
-                rank, color = "S", "red"
+                rank, color_name = "S", "🟢 優秀 (S)"
             elif total_score >= 15: 
-                rank, color = "A", "orange" 
+                rank, color_name = "A", "🔵 良好 (A)"
             elif total_score >= 12: 
-                rank, color = "B", "yellow" 
+                rank, color_name = "B", "🟡 標準 (B)"
             elif total_score >= 9: 
-                rank, color = "C", "green"  
+                rank, color_name = "C", "🟠 要努力 (C)"
             elif total_score >= 5: 
-                rank, color = "D", "blue"   
+                rank, color_name = "D", "🔴 厳しい (D)"
             else: 
-                rank, color = "Z", "gray"   
+                rank, color_name = "Z", "⚫ 測定不能 (Z)"
 
-            # 表示
+            # ==========================================
+            # 🎨 ここから下が見た目をかっこよくした表示UI
+            # ==========================================
             st.balloons()
-            st.subheader("分析結果")
-            st.markdown(f"### 総合評価: :{color}[ランク {rank}] （{total_score}点 / 20点）")
+            st.divider() # かっこいい区切り線
             
-            col1, col2, col3 = st.columns(3)
-            col1.metric("基本スコア", f"{base_score}点")
-            col2.metric("AI実績スコア", f"{ai_score}点")
-            col3.metric("マイナス評価", f"-{short_term * 4}点")
+            # AI感のある成功メッセージ
+            st.success("✨ AIによる高精度分析が完了しました。")
+            
+            # 枠線付きのコンテナで結果を囲む（ダッシュボード感）
+            with st.container(border=True):
+                st.markdown("## 📊 AI キャリア分析レポート")
+                
+                # ランクを大きく色付きで表示
+                st.markdown(f"### 総合評価: **{color_name}**")
+                st.progress(total_score / 20) # スコアのゲージ（プログレスバー）を表示
+                st.caption(f"獲得スコア: {total_score}点 / 満点: 20点")
+                
+                st.divider()
+                
+                # スコアの内訳を3列でスタイリッシュに表示
+                col1, col2, col3 = st.columns(3)
+                col1.metric("👤 基本情報スコア", f"{base_score} pt")
+                col2.metric("🤖 AI 実績評価", f"{ai_score} pt")
+                col3.metric("⚠️ リスク減点", f"-{short_term * 4} pt", delta_color="inverse")
+            
+            # AIからのメッセージ風ブロック
+            st.info("💡 **システム通知:** 上記のスコアは、入力されたデータに基づき最新のAIモデルが算出した市場価値の目安です。")
 
         except Exception as e:
-            st.error(f"エラーが発生しました。設定を確認してください：{e}")
+            st.error(f"❌ 分析中にエラーが発生しました: {e}")
 
 
 
