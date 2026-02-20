@@ -1,6 +1,7 @@
 import streamlit as st
 from google import genai
 import re
+from pypdf import PdfReader  # ★追加：PDFを解読するためのツール
 
 # ==========================================
 # 🎨 カスタムCSS（サイバーデザイン＆LEDランプ）
@@ -70,6 +71,23 @@ def check_password():
 
 if not check_password(): st.stop()
 
+# --- ★追加：ファイル（TXT / PDF）からテキストを抽出する関数 ---
+def read_files(files):
+    content = ""
+    for f in files:
+        if f.name.endswith('.txt'):
+            content += f.getvalue().decode("utf-8") + "\n"
+        elif f.name.endswith('.pdf'):
+            try:
+                pdf = PdfReader(f)
+                for page in pdf.pages:
+                    extracted = page.extract_text()
+                    if extracted:
+                        content += extracted + "\n"
+            except Exception as e:
+                content += f"[PDF読み込みエラー: {f.name}]\n"
+    return content
+
 # --- 2. AIクライアント設定 ---
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 st.set_page_config(page_title="AIエージェントシステム", page_icon="🤖", layout="wide")
@@ -86,7 +104,7 @@ with st.sidebar:
     st.divider()
 
 # ==========================================
-# 画面A：求職者ランク判定（既存機能）
+# 画面A：求職者ランク判定
 # ==========================================
 if app_mode == "1. 求職者ランク判定":
     st.title(":chart_with_upwards_trend: 求職者ランク判定プロ")
@@ -110,7 +128,8 @@ if app_mode == "1. 求職者ランク判定":
         achievement_text = st.text_area("職務経歴・実績", height=150)
     elif mode == "3. 詳細分析（資料添付あり）":
         achievement_text = st.text_area("追加の実績・補足事項（任意）", height=100)
-        uploaded_files = st.file_uploader("資料を添付", accept_multiple_files=True, type=['txt'])
+        # ★変更：受付ファイルに pdf を追加！
+        uploaded_files = st.file_uploader("履歴書などを添付（PDF/TXT）", accept_multiple_files=True, type=['txt', 'pdf'])
 
     if st.button("分析を開始する", type="primary"):
         with st.spinner("AIがデータをディープスキャン中..."):
@@ -120,7 +139,8 @@ if app_mode == "1. 求職者ランク判定":
                 advice_text = "詳細アドバイスは通常分析以上をご利用ください"
                 
                 if mode != "1. 簡易分析":
-                    file_contents = "".join([f.getvalue().decode("utf-8") + "\n" for f in uploaded_files if f.name.endswith('.txt')]) if uploaded_files else ""
+                    # ★変更：自作の関数を使ってPDFとTXTの両方を読み込む
+                    file_contents = read_files(uploaded_files) if uploaded_files else ""
                     
                     prompt = f"""プロのキャリアアドバイザーとして、【{target_industry}】の【{target_job}】志望者の市場価値を10点満点で厳しく採点してください。
 【点数】(0〜10の数字のみ)
@@ -128,7 +148,7 @@ if app_mode == "1. 求職者ランク判定":
 【改善アドバイス】(面接や書類の具体的な改善点)
 ---
 実績：{achievement_text}
-資料内容：{file_contents}"""
+資料内容：\n{file_contents}"""
                     
                     response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
                     full_text = response.text
@@ -176,12 +196,11 @@ if app_mode == "1. 求職者ランク判定":
                 st.error(f"❌ エラーが発生しました: {e}")
 
 # ==========================================
-# 画面B：企業×求職者 マッチング分析（新機能）
+# 画面B：企業×求職者 マッチング分析
 # ==========================================
 elif app_mode == "2. 企業×求職者 マッチング分析":
     st.title("🤝 企業×求職者 マッチング分析")
     
-    # ★追加：マッチング機能内の2つのモード切り替え
     match_mode = st.radio(
         "分析モードを選択してください",
         ["1. 簡易マッチング（基本情報・経験のみ）", "2. 詳細マッチング（資料・詳細テキストあり）"],
@@ -189,7 +208,6 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
     )
     st.markdown("---")
 
-    # 変数の初期化
     m_age = 25
     m_target_industry = ""
     m_target_job = ""
@@ -200,7 +218,6 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
     seeker_text = ""
     seeker_files = []
 
-    # --- モード別のUI表示 ---
     if match_mode == "1. 簡易マッチング（基本情報・経験のみ）":
         st.markdown("#### 👤 求職者の基本情報と経験")
         col1, col2, col3 = st.columns(3)
@@ -214,21 +231,22 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
             m_exp_job = st.radio("職種経験", ["あり", "なし"], index=1, horizontal=True)
 
     elif match_mode == "2. 詳細マッチング（資料・詳細テキストあり）":
-        st.info("💡 企業・求職者それぞれの情報（文章入力、またはテキストファイルの添付）を行ってください。両方組み合わせることも可能です。")
+        st.info("💡 企業・求職者それぞれの情報（文章入力、またはテキスト/PDFファイルの添付）を行ってください。")
         col_corp, col_seeker = st.columns(2)
         with col_corp:
             st.subheader("🏢 企業側の情報")
             company_text = st.text_area("募集要項・求める人物像（文章入力）", height=150)
-            company_files = st.file_uploader("企業資料を添付（複数可・txt形式）", accept_multiple_files=True, type=['txt'], key="c_files")
+            # ★変更：受付ファイルに pdf を追加！
+            company_files = st.file_uploader("企業資料を添付（PDF/TXT）", accept_multiple_files=True, type=['txt', 'pdf'], key="c_files")
         with col_seeker:
             st.subheader("👤 求職者側の情報")
             seeker_text = st.text_area("経歴・スキル・面談メモ（文章入力）", height=150)
-            seeker_files = st.file_uploader("履歴書・職務経歴書・面談文字起こし（複数可・txt形式）", accept_multiple_files=True, type=['txt'], key="s_files")
+            # ★変更：受付ファイルに pdf を追加！
+            seeker_files = st.file_uploader("履歴書・職務経歴書など（PDF/TXT）", accept_multiple_files=True, type=['txt', 'pdf'], key="s_files")
 
     if st.button("マッチング分析を実行", type="primary"):
         with st.spinner("AIがカルチャーフィットとスキルギャップを解析中..."):
             try:
-                # --- モード別のAIプロンプト生成 ---
                 if match_mode == "1. 簡易マッチング（基本情報・経験のみ）":
                     match_prompt = f"""あなたは凄腕のヘッドハンターです。
 以下の求職者の基本情報をもとに、一般的な市場における【{m_target_industry}】の【{m_target_job}】へのマッチング度（相性・内定獲得の可能性）を100点満点で推測・判定してください。
@@ -239,19 +257,12 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
 ・志望職種: {m_target_job} （経験: {m_exp_job}）
 
 必ず以下のフォーマットで出力してください。
+【マッチ度】\n(0〜100の数字のみ)\n\n【評価理由】\n(理由)\n\n【面接突破戦略】\n(アドバイス)"""
 
-【マッチ度】
-(0〜100の数字のみ)
-
-【評価理由】
-(年齢や経験の有無から推測される、この業界・職種への転職ハードルやポテンシャルの評価)
-
-【面接突破戦略】
-(未経験の場合はどうポテンシャルをアピールすべきか、経験者の場合はどう即戦力性を伝えるべきかの簡単なアドバイス)
-"""
-                else: # 詳細マッチング
-                    c_file_content = "".join([f.getvalue().decode("utf-8") + "\n" for f in company_files]) if company_files else ""
-                    s_file_content = "".join([f.getvalue().decode("utf-8") + "\n" for f in seeker_files]) if seeker_files else ""
+                else:
+                    # ★変更：自作の関数を使ってPDFとTXTの両方を読み込む
+                    c_file_content = read_files(company_files) if company_files else ""
+                    s_file_content = read_files(seeker_files) if seeker_files else ""
                     
                     match_prompt = f"""あなたは凄腕のヘッドハンターです。以下の【企業の要件】と【求職者の情報】を深く比較し、マッチング度（相性）を100点満点で判定してください。
 必ず以下のフォーマットで出力してください。
@@ -277,7 +288,6 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
 {s_file_content}
 """
 
-                # AIへのリクエスト送信
                 response = client.models.generate_content(model='gemini-2.5-flash', contents=match_prompt)
                 full_text = response.text
                 
@@ -292,14 +302,12 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                     reason_text = full_text.split("【評価理由】")[1].split("【面接突破戦略】")[0].strip()
                     strategy_text = full_text.split("【面接突破戦略】")[1].strip()
 
-                # マッチング度のランク分け
                 if match_score >= 90: rank, color_name, rank_color = "S", "運命の出会い (Match 90%+)", "#00ff00"
                 elif match_score >= 75: rank, color_name, rank_color = "A", "高確率で内定 (Match 75%+)", "#00e5ff"
                 elif match_score >= 60: rank, color_name, rank_color = "B", "選考通過ライン (Match 60%+)", "#ffff00"
                 elif match_score >= 40: rank, color_name, rank_color = "C", "懸念あり (Match 40%+)", "#ff9900"
                 else: rank, color_name, rank_color = "D", "ミスマッチの可能性大 (Match 39%-)", "#ff0000"
 
-                # 🎨 画面への描画
                 st.markdown('<div class="cyber-panel scan-effect">', unsafe_allow_html=True)
                 st.markdown("## 🎯 AI マッチング解析レポート")
                 
@@ -319,7 +327,6 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 st.markdown(f'<div class="fb-box" style="border-left-color:#00ff00;">{strategy_text}</div>', unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
-                # エージェント向けアラート
                 if match_score >= 75:
                     st.success("🔥 **【エージェント指示】** 非常に高いマッチ度です！すぐに推薦状を作成し、面接対策のスケジュールを組んでください。")
                 elif match_score < 50:
@@ -327,5 +334,3 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
 
             except Exception as e:
                 st.error(f"❌ 解析中にエラーが発生しました: {e}")
-
-
