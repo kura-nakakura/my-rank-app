@@ -155,6 +155,7 @@ if app_mode == "1. 求職者ランク判定":
                 job_bonus = 0
                 if age <= 24 and job_changes == 0: job_bonus = 10
                 elif 25 <= age <= 29 and job_changes <= 1: job_bonus = 10
+                elif 25 <= age <= 29 and job_changes <= 2: job_bonus = 8
                 elif 30 <= age <= 35 and job_changes <= 2: job_bonus = 10
                 elif 35 <= age <= 45 and job_changes <= 3: job_bonus = 10
                 elif 45 <= age <= 60 and job_changes <= 5: job_bonus = 7
@@ -279,6 +280,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 # ★ここにもエラーガードを追加
                 if "429" in str(e): st.error("⚠️ 【利用制限】上限に達しました。30秒ほど待ってから再試行してください。")
                 else: st.error(f"❌ 解析エラー: {e}")
+
 
 
 
