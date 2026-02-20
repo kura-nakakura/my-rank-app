@@ -13,6 +13,11 @@ st.markdown("""
         background-image: linear-gradient(rgba(10, 25, 47, 0.9), rgba(10, 25, 47, 0.9)),
                           url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300e5ff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
     }
+    /* 解析完了時の閃光エフェクト */
+    @keyframes flash {
+        0% { background-color: rgba(0, 229, 255, 0.4); }
+        100% { background-color: transparent; }
+    }
     .cyber-panel {
         background: rgba(23, 42, 70, 0.7);
         border: 1px solid #00E5FF;
@@ -24,6 +29,7 @@ st.markdown("""
         position: relative;
         overflow: hidden;
     }
+    /* パネル内のスキャン線アニメーション */
     .scan-effect::before {
         content: '';
         position: absolute;
@@ -57,7 +63,7 @@ def check_password():
         st.session_state.password_correct = False
     if st.session_state.password_correct: return True
 
-    st.title("🔐 システムログイン")
+    st.title("システムログイン")
     pwd = st.text_input("アクセスコードを入力してください", type="password")
     if st.button("ログイン", type="primary"):
         if pwd == LOGIN_PASSWORD:
@@ -86,6 +92,8 @@ def read_files(files):
     return content
 
 # --- 2. AIクライアント設定 ---
+# Gemini 2.5 Flashはコスト効率が良く、価格とパフォーマンスのバランスが最適化されています
+# また、思考機能（推論プロセス）を搭載しているため、精度の高い分析が可能です
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 st.set_page_config(page_title="AIエージェントシステム", page_icon="🤖", layout="wide")
 
@@ -153,7 +161,11 @@ if app_mode == "1. 求職者ランク判定":
                 elif total_score >= 5: r, cn, rc = "D", "厳しい (Class-D)", "#ff0000"
                 else: r, cn, rc = "Z", "測定不能 (Error)", "#888888"
 
-                st.balloons()
+                # --- 閃きと成功のデジタル演出 ---
+                st.toast("✅ スキャン完了：高精度レポートを生成しました", icon="🚀")
+                st.markdown("<script>window.parent.document.querySelector('.stApp').style.animation = 'flash 0.6s ease-out';</script>", unsafe_allow_html=True)
+                st.markdown("<style>.stApp { animation: flash 0.6s ease-out; }</style>", unsafe_allow_html=True)
+
                 st.markdown(f"""
                 <div style="background-color: rgba(0, 229, 255, 0.2); padding: 10px; border-radius: 5px; border-left: 5px solid #00E5FF;">
                     ✨ <b>Analysis Complete:</b> 【{safe_ind} / {safe_job}】専門AIによるスキャンが完了しました。
@@ -161,7 +173,7 @@ if app_mode == "1. 求職者ランク判定":
                 """, unsafe_allow_html=True)
                 
                 st.markdown('<div class="cyber-panel scan-effect">', unsafe_allow_html=True)
-                st.markdown("## 📜 AI キャリア分析レポート")
+                st.markdown("## 📃 AI キャリア分析レポート")
                 st.markdown(f"<div style='display:flex; align-items:center;'><div style='width:22px; height:22px; border-radius:50%; background:{rc}; box-shadow:0 0 20px {rc}; margin-right:15px;'></div><h3 style='color:{rc}; text-shadow:0 0 15px {rc}; margin:0;'>総合評価: {cn}</h3></div>", unsafe_allow_html=True)
                 st.progress(max(0, min(total_score / 20, 1.0)))
                 
@@ -230,9 +242,13 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 elif ms >= 40: r, cn, rc = "C", "懸念あり (40%+)", "#ff9900"
                 else: r, cn, rc = "D", "ミスマッチの可能性大 (39%-)", "#ff0000"
 
+                # --- 閃きと成功のデジタル演出 ---
+                st.toast("✅ 解析完了：最適な戦略を算出しました", icon="🎯")
+                st.markdown("<style>.stApp { animation: flash 0.6s ease-out; }</style>", unsafe_allow_html=True)
+
                 st.markdown('<div class="cyber-panel scan-effect">', unsafe_allow_html=True)
                 st.markdown("## 🎯 AI マッチング解析レポート")
-                st.markdown(f"<div style='display:flex; align-items:center;'><div style='width:22px; height:22px; border-radius:50%; background:{rc}; box-shadow:0 0 20px {rc}; margin-right:15px;'></div><h3 style='color:{rc}; margin:0;'>判定: {cn}</h3></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='display:flex; align-items:center;'><div style='width:22px; height:22px; border-radius:50%; background:{rc}; box-shadow:0 0 20px {rc}; margin-right:15px;'></div><h3 style='color:{rc}; text-shadow:0 0 15px {rc}; margin:0;'>判定: {cn}</h3></div>", unsafe_allow_html=True)
                 st.progress(max(0, min(ms / 100, 1.0)))
                 st.divider()
                 st.markdown("#### ⚖️ マッチング評価理由")
