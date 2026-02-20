@@ -40,7 +40,6 @@ st.markdown("""
         color: #00E5FF !important;
         text-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
     }
-    /* フィードバック文の装飾 */
     .fb-box {
         background: rgba(255, 255, 255, 0.05);
         border-left: 4px solid #00E5FF;
@@ -90,6 +89,12 @@ with st.sidebar:
     age = st.number_input("年齢", 18, 65, 25)
     job_changes = st.number_input("転職回数", 0, 15, 1)
     short_term = st.number_input("短期離職数", 0, 10, 0)
+    
+    # ★追加：志望業種・職種の入力エリア
+    st.divider()
+    st.header(":office: 志望企業情報")
+    target_industry = st.text_input("志望業種", placeholder="例：IT、メーカー、商社など", value="IT/Web業界")
+    target_job = st.text_input("志望職種", placeholder="例：エンジニア、営業、経理など", value="職種全般")
 
 achievement_text = ""
 uploaded_files = []
@@ -108,7 +113,6 @@ if st.button("分析を開始する", type="primary"):
             reason_text = "簡易分析のためフィードバックはありません。"
             advice_text = "詳細なアドバイスは通常分析以上をご利用ください。"
             
-            # ★ ここが強化されたAIプロンプト（指示書）です ★
             if mode != "1. 簡易分析（基本情報のみ）":
                 file_contents = ""
                 if mode == "3. 詳細分析（資料添付あり）" and uploaded_files:
@@ -116,16 +120,17 @@ if st.button("分析を開始する", type="primary"):
                         if file.name.endswith('.txt'):
                             file_contents += file.getvalue().decode("utf-8") + "\n"
 
-                # 厳格なキャリアアドバイザーとして振る舞うよう指示
-                base_prompt = f"""あなたはプロの厳格なIT/Web業界キャリアアドバイザーです。
-以下の求職者の実績や資料を読み込み、市場価値を10点満点で厳しく採点してください。
+                # ★変更：業種・職種を変数としてAIに読み込ませる
+                base_prompt = f"""あなたはプロの厳格なキャリアアドバイザーです。
+今回は【{target_industry}】の【{target_job}】への転職を希望する求職者を評価します。
+以下の求職者の実績や資料を読み込み、志望する業界・職種の市場価値を基準に、10点満点で厳しく採点してください。
 必ず以下のフォーマット通りに、3つの項目を明確に分けて出力してください。
 
 【点数】
 (0〜10の数字のみ)
 
 【評価理由】
-(なぜその点数になったのか、プロ目線での具体的な理由。強みと弱みを含めること)
+(なぜその点数になったのか、その業界・職種のプロ目線での具体的な理由。強みと弱みを含めること)
 
 【改善アドバイス】
 (履歴書や職務経歴書のどこを修正すべきか、面接で何をアピールすべきかの具体的な助言)
@@ -138,7 +143,6 @@ if st.button("分析を開始する", type="primary"):
                 else:
                     prompt = base_prompt
                 
-                # 安定して動作する最新モデル（gemini-2.0-flash）を指定
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
                     contents=prompt
@@ -146,11 +150,10 @@ if st.button("分析を開始する", type="primary"):
                 
                 full_text = response.text
                 
-                # AIの回答から「点数」「理由」「アドバイス」を切り分ける処理
                 score_match = re.search(r'【点数】\s*(\d+)', full_text)
                 if score_match:
                     ai_score = int(score_match.group(1))
-                elif re.search(r'\d+', full_text): # フェイルセーフ
+                elif re.search(r'\d+', full_text):
                     ai_score = int(re.search(r'\d+', full_text).group())
 
                 if "【評価理由】" in full_text and "【改善アドバイス】" in full_text:
@@ -189,7 +192,7 @@ if st.button("分析を開始する", type="primary"):
             # ==========================================
             st.markdown(f"""
             <div style="background-color: rgba(0, 229, 255, 0.2); padding: 10px; border-radius: 5px; border-left: 5px solid #00E5FF;">
-                ✨ <b>Analysis Complete:</b> キャリアアドバイザーAIによるスキャンが完了しました。
+                ✨ <b>Analysis Complete:</b> 【{target_industry} / {target_job}】専門AIによるスキャンが完了しました。
             </div>
             """, unsafe_allow_html=True)
             
@@ -207,7 +210,6 @@ if st.button("分析を開始する", type="primary"):
             
             st.divider()
 
-            # --- 追加：AIフィードバックの表示 ---
             st.markdown("#### 📝 AI 評価理由")
             st.markdown(f'<div class="fb-box">{reason_text}</div>', unsafe_allow_html=True)
 
@@ -216,15 +218,15 @@ if st.button("分析を開始する", type="primary"):
 
             st.markdown("</div>", unsafe_allow_html=True)
 
-            # --- 追加：エージェント向け内部メモ（優先度判定） ---
-            if total_score < 12: # C, D, Z ランクの場合
+            # エージェント向け内部アラート
+            if total_score < 12: 
                 st.markdown("""
                 <div style="margin-top: 20px; padding: 15px; border-radius: 10px; background-color: rgba(255, 50, 50, 0.15); border: 1px solid #ff3333;">
                     🚨 <b>【エージェント向け内部アラート】対応優先度：低</b><br>
                     総合評価がCランク以下です。スキルや経歴の深掘り・書類添削に時間がかかる可能性が高いため、リソース配分に注意してください。
                 </div>
                 """, unsafe_allow_html=True)
-            else: # S, A, B ランクの場合
+            else: 
                 st.markdown("""
                 <div style="margin-top: 20px; padding: 15px; border-radius: 10px; background-color: rgba(0, 255, 100, 0.15); border: 1px solid #00ff66;">
                     🔥 <b>【エージェント向け内部アラート】対応優先度：高</b><br>
