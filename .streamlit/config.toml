@@ -1,6 +1,11 @@
 [theme]
+# ベースはダークモード
 base="dark"
+# メインのアクセントカラー（発光する水色）
 primaryColor="#00E5FF"
-backgroundColor="#0E1117"
-secondaryBackgroundColor="#1E212B"
-textColor="#FAFAFA"
+# 背景色（ただの黒ではなく、少し青みのある深い色に）
+backgroundColor="#0A192F"
+# サイドバーや入力ボックスの背景（メイン背景より少し明るく）
+secondaryBackgroundColor="#172A46"
+# 文字色（白に近い色で視認性を確保）
+textColor="#E6F1FF"
