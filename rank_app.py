@@ -187,10 +187,11 @@ if app_mode == "1. 求職者ランク判定":
                     <div style="background: rgba(255,255,255,0.1); border-radius: 5px; height: 10px; margin-bottom: 20px;">
                         <div style="background: {rc}; width: {min(100, total_score*5)}%; height: 100%; border-radius: 5px;"></div>
                     </div>
-                    <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
-                        <div style="text-align: center;"><small>基本情報</small><br><b style="color:#00E5FF; font-size:1.5rem;">{(5 if 22<=age<=35 else 0) + (5 if job_changes<=2 else 0)}pt</b></div>
-                        <div style="text-align: center;"><small>AIスコア</small><br><b style="color:#00E5FF; font-size:1.5rem;">{ai_score}pt</b></div>
-                        <div style="text-align: center;"><small>リスク</small><br><b style="color:#FF4B4B; font-size:1.5rem;">-{short_term * 4}pt</b></div>
+                    <div style="display: flex; justify-content: space-around; flex-wrap: wrap;">
+                        <div style="text-align: center; min-width: 80px;"><small>年齢評価</small><br><b style="color:#00E5FF; font-size:1.5rem;">{age_s}pt</b></div>
+                        <div style="text-align: center; min-width: 80px;"><small>経歴評価</small><br><b style="color:#00E5FF; font-size:1.5rem;">{job_bonus}pt</b></div>
+                        <div style="text-align: center; min-width: 80px;"><small>回数/短期</small><br><b style="color:#FF4B4B; font-size:1.5rem;">{job_penalty - st_penalty}pt</b></div>
+                        <div style="text-align: center; min-width: 80px;"><small>AI評価</small><br><b style="color:#00E5FF; font-size:1.5rem;">{ai_score}pt</b></div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -277,6 +278,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 # ★ここにもエラーガードを追加
                 if "429" in str(e): st.error("⚠️ 【利用制限】上限に達しました。30秒ほど待ってから再試行してください。")
                 else: st.error(f"❌ 解析エラー: {e}")
+
 
 
 
