@@ -65,7 +65,7 @@ def check_password():
         st.session_state.password_correct = False
     if st.session_state.password_correct: return True
 
-    st.title("🔐 システムログイン")
+    st.title("システムログイン")
     pwd = st.text_input("アクセスコードを入力してください", type="password")
     if st.button("ログイン", type="primary"):
         if pwd == LOGIN_PASSWORD:
@@ -111,7 +111,7 @@ with st.sidebar:
 # 画面A：求職者ランク判定
 # ==========================================
 if app_mode == "1. 求職者ランク判定":
-    st.title("📈 求職者ランク判定プロ")
+    st.title("📉 求職者ランク判定プロ")
     mode = st.radio("分析モードを選択してください", ["1. 簡易分析", "2. 通常分析（実績AI判定あり）", "3. 詳細分析（資料添付あり）"], horizontal=True)
 
     with st.sidebar:
@@ -120,7 +120,7 @@ if app_mode == "1. 求職者ランク判定":
         job_changes = st.number_input("転職回数", 0, 15, 1)
         short_term = st.number_input("短期離職数", 0, 10, 0)
         
-        st.header("🏢 志望企業情報")
+        st.header(" 志望企業情報")
         target_industry = st.text_input("志望業種", value="", placeholder="例：IT・Web業界、製造業")
         target_job = st.text_input("志望職種", value="", placeholder="例：エンジニア、営業、経理")
 
@@ -131,7 +131,7 @@ if app_mode == "1. 求職者ランク判定":
         achievement_text = st.text_area("追加の実績・補足事項（任意）", height=100)
         uploaded_files = st.file_uploader("資料を添付 (PDF/TXT)", accept_multiple_files=True, type=['txt', 'pdf'])
 
-    if st.button("🔥 分析を開始する", type="primary"):
+    if st.button("分析を開始する", type="primary"):
         with st.spinner("AIがデータをディープスキャン中..."):
             try:
                 safe_ind = target_industry if target_industry else "全業種"
@@ -164,7 +164,7 @@ if app_mode == "1. 求職者ランク判定":
                 else: r, cn, rc = "Z", "測定不能 (Error)", "#888888"
 
                 # --- 閃光＆トースト演出（確実発動版） ---
-                st.toast("✅ スキャン完了：高精度レポートを生成しました", icon="🚀")
+                st.toast("スキャン完了：成功しました", icon="🤖")
                 flash_id = str(time.time())
                 st.markdown(f"""
                     <div id="f-{flash_id}" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background-color:rgba(0,229,255,0.5); z-index:9999; pointer-events:none; animation:flash-fade 0.7s ease-out forwards;"></div>
@@ -177,7 +177,7 @@ if app_mode == "1. 求職者ランク判定":
                 """, unsafe_allow_html=True)
                 
                 st.markdown('<div class="cyber-panel scan-effect">', unsafe_allow_html=True)
-                st.markdown("## 📊 AI キャリア分析レポート")
+                st.markdown("## 📃 AI キャリア分析レポート")
                 st.markdown(f"<div style='display:flex; align-items:center;'><div style='width:22px; height:22px; border-radius:50%; background:{rc}; box-shadow:0 0 20px {rc}; margin-right:15px;'></div><h3 style='color:{rc}; text-shadow:0 0 15px {rc}; margin:0;'>総合評価: {cn}</h3></div>", unsafe_allow_html=True)
                 st.progress(max(0, min(total_score / 20, 1.0)))
                 
@@ -247,7 +247,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 else: r, cn, rc = "D", "ミスマッチの可能性大 (39%-)", "#ff0000"
 
                 # --- 閃光＆トースト演出（確実発動版） ---
-                st.toast("✅ 解析完了：最適な戦略を算出しました", icon="🎯")
+                st.toast("解析完了：成功しました", icon="🤖")
                 flash_id = str(time.time())
                 st.markdown(f"""
                     <div id="f-{flash_id}" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background-color:rgba(0,229,255,0.5); z-index:9999; pointer-events:none; animation:flash-fade 0.7s ease-out forwards;"></div>
@@ -266,5 +266,6 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 elif ms < 50: st.error("🚨 **【エージェント向け】** 優先度：低。慎重なフォローが必要です。")
                 st.markdown("</div>", unsafe_allow_html=True)
             except Exception as e: st.error(f"❌ 解析エラー: {e}")
+
 
 
