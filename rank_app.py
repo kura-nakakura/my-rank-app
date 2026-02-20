@@ -111,7 +111,7 @@ with st.sidebar:
 # 画面A：求職者ランク判定
 # ==========================================
 if app_mode == "1. 求職者ランク判定":
-    st.title("📉 求職者ランク判定プロ")
+    st.title("求職者ランク判定プロ")
     mode = st.radio("分析モードを選択してください", ["1. 簡易分析", "2. 通常分析（実績AI判定あり）", "3. 詳細分析（資料添付あり）"], horizontal=True)
 
     with st.sidebar:
@@ -120,7 +120,7 @@ if app_mode == "1. 求職者ランク判定":
         job_changes = st.number_input("転職回数", 0, 15, 1)
         short_term = st.number_input("短期離職数", 0, 10, 0)
         
-        st.header(" 志望企業情報")
+        st.header("🏢 志望企業情報")
         target_industry = st.text_input("志望業種", value="", placeholder="例：IT・Web業界、製造業")
         target_job = st.text_input("志望職種", value="", placeholder="例：エンジニア、営業、経理")
 
@@ -201,7 +201,7 @@ if app_mode == "1. 求職者ランク判定":
 # 画面B：マッチング分析
 # ==========================================
 elif app_mode == "2. 企業×求職者 マッチング分析":
-    st.title("🤝 企業×求職者 マッチング分析")
+    st.title("企業×求職者 マッチング分析")
     m_mode = st.radio("分析モードを選択してください", ["1. 簡易マッチング（基本情報・経験のみ）", "2. 詳細マッチング（資料・詳細テキストあり）"], horizontal=True)
 
     if m_mode == "1. 簡易マッチング（基本情報・経験のみ）":
@@ -266,6 +266,7 @@ elif app_mode == "2. 企業×求職者 マッチング分析":
                 elif ms < 50: st.error("🚨 **【エージェント向け】** 優先度：低。慎重なフォローが必要です。")
                 st.markdown("</div>", unsafe_allow_html=True)
             except Exception as e: st.error(f"❌ 解析エラー: {e}")
+
 
 
 
