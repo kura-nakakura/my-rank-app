@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components  # ★追加：PDF（印刷）ボタン用コンポーネント
 from google import genai
 import re
 from pypdf import PdfReader
@@ -289,13 +290,35 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     st.subheader("📄 職務経歴書（自己PR含む・高品質版）")
                     st.code(combined_history, language="text")
                     
-                    docx_file = create_docx(combined_history)
-                    st.download_button(
-                        label="📥 職務経歴書をWordでダウンロード",
-                        data=docx_file,
-                        file_name=f"職務経歴書_{time.strftime('%Y%m%d')}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
+                    # ★変更箇所：WordダウンロードボタンとPDF印刷ボタンを横に並べて配置
+                    c_btn1, c_btn2 = st.columns([1, 1])
+                    with c_btn1:
+                        docx_file = create_docx(combined_history)
+                        st.download_button(
+                            label="📥 職務経歴書をWordでダウンロード",
+                            data=docx_file,
+                            file_name=f"職務経歴書_{time.strftime('%Y%m%d')}.docx",
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        )
+                    with c_btn2:
+                        components.html(
+                            """
+                            <button onclick="window.parent.print()" style="
+                                background-color: transparent; 
+                                color: #00E5FF; 
+                                border: 1px solid #00E5FF; 
+                                padding: 8px 15px; 
+                                border-radius: 8px; 
+                                font-size: 14px;
+                                cursor: pointer;
+                                transition: 0.3s;
+                                width: 100%;
+                            " onmouseover="this.style.backgroundColor='#00E5FF'; this.style.color='#0A192F';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#00E5FF';">
+                            🖨️ PDFで保存（印刷プレビュー）
+                            </button>
+                            """, height=50
+                        )
+                        st.caption("※PDF保存の際、ブラウザの印刷設定で「背景のグラフィック」をオンにすると綺麗に保存できます。")
                     
                     st.subheader("📄 志望動機（右上のアイコンからコピーできます）")
                     st.code(motive, language="text")
@@ -394,6 +417,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
