@@ -159,145 +159,293 @@ if app_mode == "1. 応募時 (ランク判定)":
 # Phase 2: 初回面談後 (詳細分析/書類作成)
 # ==========================================
 elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
+
     st.title("Phase 2: 詳細分析 & 高品質書類一括作成")
+
     
+
+    st.markdown('<div class="cyber-panel">', unsafe_allow_html=True)
+
     c_top1, c_top2 = st.columns(2)
+
     with c_top1: t_ind = st.text_input("志望業種", placeholder="未入力の場合は添付資料から判断します")
+
     with c_top2: t_job = st.text_input("志望職種", placeholder="未入力の場合は添付資料から判断します")
 
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+
     col1, col2 = st.columns(2)
+
     with col1:
+
+        st.markdown('<div class="cyber-panel" style="min-height:450px;">', unsafe_allow_html=True)
+
         st.subheader("🏢 企業・募集情報")
+
         u_files_corp = st.file_uploader("企業資料 (求人票など)", accept_multiple_files=True, key="corp_up")
+
         achievement = st.text_area("補足事項・実績（面談メモなど）", height=200, placeholder="ここに入力するか、文字起こしファイルを右側に添付してください")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
         
+
     with col2:
+
+        st.markdown('<div class="cyber-panel" style="min-height:450px;">', unsafe_allow_html=True)
+
         st.subheader("📂 求職者資料・文字起こし")
+
         u_files_seeker = st.file_uploader("履歴書・面談文字起こし (PDF/TXT)", accept_multiple_files=True, key="seeker_up")
+
         st.info("💡 複数の資料をアップロードすることでAIがより詳細に分析します。")
 
-    if st.button("AI書類生成を開始", type="primary"):
-        corp_content = read_files(u_files_corp) if u_files_corp else ""
-        seeker_content = read_files(u_files_seeker) if u_files_seeker else ""
+        st.markdown("</div>", unsafe_allow_html=True)
+
+
+
+    if st.button("AI書類生成を開始", type="primary", use_container_width=True):
+
+        # 修正：企業資料またはテキスト入力のどちらかがあればOKとする
+
+        corp_data = read_files(u_files_corp) if u_files_corp else ""
+
+        seeker_data = read_files(u_files_seeker) if u_files_seeker else ""
+
         
-        if not (t_ind or corp_content):
+
+        if not (t_ind or corp_data):
+
             st.warning("志望業種を入力するか、企業資料を添付してください。")
-        elif not (achievement or seeker_content):
+
+        elif not (achievement or seeker_data):
+
             st.warning("実績を入力するか、求職者資料/文字起こしを添付してください。")
+
         else:
-            with st.spinner("要約を禁止し、詳細に執筆中..."):
-                all_file_data = corp_content + "\n" + seeker_content
-                
-                # プロンプト（一切要約せず100%維持）
+
+            with st.spinner("プロキャリアライターが全資料をスキャン中..."):
+
+                file_data = read_files(u_files)
+
+                # インデントエラーを修正し、要約禁止命令を強化
+
                 prompt = f"""
+
 あなたは人材紹介会社の**プロキャリアライター兼採用目線の職務経歴書編集者**です。
+
 求職者の職歴情報と応募企業情報をもとに、企業が「ぜひ会ってみたい」と思える具体的・誠実・読みやすい書類を作成してください。
 
+
+
 【入力情報】
-志望業種：{t_ind if t_ind else "未入力（資料から判断せよ）"} / 職種：{t_job if t_job else "未入力（資料から判断せよ）"}
+
+志望業種：{t_ind} / 職種：{t_job}
+
 実績・メモ：{achievement}
-添付資料：{all_file_data}
+
+添付資料：{file_data}
+
+
 
 ---
+
 以下の【】で囲まれた各セクションを、指示に従って「一切省略せずに」出力してください。
 
+
+
 【評価】
+
 (S最高/A良き！/Bいい感じ/C要努力/Z測定不能のみ)
 
+
+
 【理由とアドバイス】
+
 (評価の理由と、エージェントへの書類作成等で見抜くべき視点のアドバイスを記載)
 
+
+
 【職務経歴】
+
 **下記職務経歴書自動生成プロンプト出力ルール**に従って作成してください。
+
 1. 作成日・氏名
+
 2. 職務経歴（各社ごとに以下の構成を維持）
+
    【会社名】
+
    雇用形態：◯◯
+
    事業内容：◯◯
+
    役職：◯◯
+
    ▼業務内容
+
    ・主要業務を5〜7行で簡潔に。例：「売上管理」「顧客対応」「教育・運営」「営業活動」など動作中心で記載。
+
    ▼成果
+
    ・数値・改善・貢献を具体的に。
+
    ・抽象語を避け、「何を→どう行い→どうなったか」で構成。
 
+
+
 【自己PR】
+
 -応募企業に最適化された自己PR
+
 - 応募企業の理念・社風・仕事内容に合わせ、これまでの経験をどう活かせるか。
+
 - 「なぜこの会社に惹かれたのか」も含める。
+
 - 400字で構成。事実を元にし、嘘や推測は含めない。
+
 - 「」や””や・などAI文章だとわかる記号は控える。
+
 - 文体は敬体（です・ます）。
+
 - 一文は60文字以内で簡潔。
+
 - 丁寧・誠実・安定感のある文体で統一。
 
+
+
 🔹【出力フォーマット（例）】↓
+
 職務経歴書
+
 （作成日：◯年◯月◯日）
+
 （氏名：◯◯ ◯◯）
 
+
+
 ---
+
 ■職務経歴
+
 【会社名】
+
 雇用形態：正社員
+
 事業内容：〇〇
+
 役職：〇〇
 
+
+
 ▼業務内容
+
 ・〇〇業務を担当し、〇〇を実施。
+
 ・〇〇を通じて〇〇に貢献。
 
+
+
 ▼成果
+
 ・〇〇を実現し、〇〇％改善。
+
 ・〇〇件の契約・販売を継続的に達成。
+
 等、実際の情報を基に記載する
+
 （以下同様に記載）
+
 ---
+
 ■自己PR
 
+
+
 これまで〇〇業界で培った〇〇力・〇〇力を活かし、〇〇様が大切にされている〇〇の理念に共感しております。
+
 特に〇〇経験では〇〇という成果を上げ、〇〇力を身につけました。
+
 今後は〇〇として、〇〇の実現に貢献したいと考えています。
+
 ---
 
+
+
 【志望動機】
+
 - 企業にマイナスにならないのを前提に、年齢に合わせた文章・言葉使いにする。
+
 - 約450字で作成。業務や実績は推測や嘘を避ける。
+
 - 「」や””や・などは控える。
+
 """
+
                 try:
+
                     resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+
                     res = resp.text
+
                     
-                    st.markdown(f"""
-                    <div class="cyber-panel">
-                        <div class="scan-line"></div>
-                        <h3>AI分析評価スコア: {get_section('評価', res)} / 10</h3>
-                        <div class='fb-box'>{get_section('理由とアドバイス', res)}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+
+                    # 分析結果表示
+
+                    st.metric("AI分析評価スコア", f"{get_section('評価', res)} / 10")
+
+                    st.markdown(f"#### 💡 エージェントへのアドバイス\n<div class='fb-box'>{get_section('理由とアドバイス', res)}</div>", unsafe_allow_html=True)
+
                     
+
                     st.divider()
+
                     
+
+                    # 書類表示（各セクションを確実に表示）
+
                     st.subheader("📄 職務経歴（高品質版）")
+
+                    st.code(get_section('職務経歴', res), language="text")
+
+                    # --- Wordダウンロードボタンの追加 ---
+
                     job_history_text = get_section('職務経歴', res)
-                    st.code(job_history_text, language="text")
-                    
+
                     docx_file = create_docx(job_history_text)
+
                     st.download_button(
+
                         label="📥 職務経歴書をWordでダウンロード",
+
                         data=docx_file,
+
                         file_name=f"職務経歴書_{time.strftime('%Y%m%d')}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+
+                        use_container_width=True
+
                     )
+
                     
+
                     st.subheader("📄 自己PR（応募企業最適化）")
+
                     st.code(get_section('自己PR', res), language="text")
+
                     
+
                     st.subheader("📄 志望動機")
+
                     st.code(get_section('志望動機', res), language="text")
+
                     
+
                 except Exception as e:
+
                     st.error(f"解析エラー: {e}")
 
 # ==========================================
@@ -395,6 +543,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
