@@ -161,7 +161,7 @@ if app_mode == "1. 応募時 (ランク判定)":
 
         st.markdown(f'<div class="cyber-panel"><h3>判定結果: <span style="color:{rc};">{cn}</span></h3></div>', unsafe_allow_html=True)
         
-        # 優先度通知（高・中・低の分離を徹底）
+        # 優先度通知
         if total >= 15:
             st.success("NICE❕ **【エージェント指示】** 優先度：高　市場価値が高い人材です。早期の内定獲得を狙いましょう。")
         elif 7 <= total < 15:
@@ -193,7 +193,6 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
         corp_data = read_files(u_files_corp) if u_files_corp else ""
         seeker_data = read_files(u_files_seeker) if u_files_seeker else ""
         
-        # 理想通り、企業情報と求職者情報がそれぞれあるかチェック
         has_corp_info = bool(t_ind or t_job or corp_data)
         has_seeker_info = bool(achievement or seeker_data)
         
@@ -204,7 +203,7 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
         else:
             with st.spinner("プロキャリアライターが企業と求職者の情報を深く分析中..."):
                 
-                # AIが混乱しないよう、情報を完全に構造化して渡すプロンプト
+                # ★修正ポイント：職務経歴の「業務内容」と「成果」の文末ルールを厳格化しました
                 prompt = f"""
 あなたは人材紹介会社の**プロキャリアライター兼採用目線の職務経歴書編集者**です。
 提供された「企業情報」と「求職者情報」を深く分析し、企業が「ぜひ会ってみたい」と思える具体的・誠実・読みやすい書類を作成してください。
@@ -239,10 +238,11 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
    事業内容：〇〇
    役職：〇〇
    ▼業務内容
-   ・主要業務を5〜7行で簡潔に記載。（例・〇〇業務を担当し、〇〇を実施。・〇〇を通じて〇〇に貢献。）
+   ・実際の業務内容（タスク・役割）を5〜7行で具体的に記載。
+   ・【絶対ルール】文末は「〜ました」「〜です」を禁止し、必ず「〇〇を実施。」「〇〇を担当。」「〇〇に貢献。」と簡潔に言い切ること。
    ▼成果
-   ・数値・改善・貢献を具体的に記載。（例・〇〇を実現し、〇〇％改善。・〇〇件の契約・販売を継続的に達成。）
-   ※以下同様に記載
+   ・数値・改善・貢献を具体的に記載。
+   ・【絶対ルール】文末は「〜ました」を禁止し、「〇〇を実現し、〇〇％改善。」「〇〇件の契約を継続的に達成。」のように言い切ること。
 3. 自己PR
    - 企業情報に最適化された自己PR。
    - 企業の理念・社風・仕事内容に合わせ、経験をどう活かせるか、なぜ惹かれたかを記載。
@@ -264,14 +264,12 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     
                     st.divider()
                     
-                    # 職務経歴（自己PR込み）と志望動機のみを抽出
                     hist = get_section('職務経歴', res)
                     motive = get_section('志望動機', res)
                     
                     st.subheader("📄 職務経歴書（自己PR含む・高品質版）")
                     st.code(hist, language="text")
                     
-                    # Wordダウンロードボタン（経歴と志望動機の2つを渡す）
                     docx_file = create_docx(hist, motive)
                     st.download_button(
                         label="📥 職務経歴書をWordでダウンロード",
