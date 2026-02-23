@@ -88,7 +88,6 @@ label p { color: #00E5FF !important; font-weight: bold !important; font-size: 1r
 """, unsafe_allow_html=True)
 
 
-
 # --- セキュリティ ---
 LOGIN_PASSWORD = "HR9237"
 if "password_correct" not in st.session_state: st.session_state.password_correct = False
@@ -440,6 +439,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
