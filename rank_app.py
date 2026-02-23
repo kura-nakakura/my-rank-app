@@ -28,7 +28,7 @@ st.markdown("""
     position: relative; overflow: hidden;
 }
 
-/* スキャンアニメーション（位置修正） */
+/* スキャンアニメーション */
 .scan-line {
     position: absolute; top: -100%; left: -100%; width: 300%; height: 300%;
     background: linear-gradient(to bottom, transparent, rgba(0, 229, 255, 0.4) 50%, transparent);
@@ -400,6 +400,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
