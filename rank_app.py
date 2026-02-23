@@ -120,18 +120,17 @@ elif app_mode == "2. 初回面談後 (詳細分析/高品質書類作成)":
     
     col1, col2 = st.columns(2)
     with col1:
-        t_ind = st.text_input("志望業種", placeholder="例：IT・Web業界")
-        t_job = st.text_input("志望職種", placeholder="例：法人営業")
-        achievement = st.text_area("面談メモ・実績追加・強み（自由入力）", height=200)
+        st.subheader("📋 基本入力")
+        t_industry = st.text_input("志望業種")
+        t_job = st.text_input("志望職種")
+        interview_notes = st.text_area("面談メモ・実績", height=150, placeholder="面談で聞いた実績、強み、人柄など")
     with col2:
-        u_files = st.file_uploader("履歴書・職務経歴書などの資料を添付", accept_multiple_files=True)
+        st.subheader("📂 書類添付")
+        u_files = st.file_uploader("既存の履歴書・職務経歴書 (PDF/TXT)", accept_multiple_files=True)
 
-    if st.button("詳細分析・高品質書類作成を実行", type="primary"):
-        if not achievement and not u_files:
-            st.error("分析には実績入力または資料添付が必要です。")
-        else:
-            with st.spinner("プロキャリアライターとして執筆中..."):
-                file_data = read_files(u_files)
+    if st.button("AI書類生成を開始", type="primary"):
+        with st.spinner("プロフェッショナルな書類を作成中..."):
+            file_data = read_files(u_files)
                 # あなたの高品質プロンプトを「システム指示」として完全反映
                 prompt = f"""
 あなたは人材紹介会社の**プロキャリアライター兼採用目線の職務経歴書編集者**です。
@@ -322,6 +321,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
