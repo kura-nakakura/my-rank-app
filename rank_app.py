@@ -77,6 +77,16 @@ label p, .stTextInput label, .stNumberInput label, .stTextArea label, .stRadio l
 </style>
 """, unsafe_allow_html=True)
 
+# ==========================================
+# 💾 セッション記憶の初期化 (履歴・チャット用)
+# ==========================================
+if "history_log" not in st.session_state:
+    st.session_state.history_log = [] # 最大5件の履歴保存用
+if "phase2_generated" not in st.session_state:
+    st.session_state.phase2_generated = False # 生成完了フラグ
+if "chat_messages" not in st.session_state:
+    st.session_state.chat_messages = [] # チャット履歴保存用
+
 # --- セキュリティ ---
 LOGIN_PASSWORD = "HR9237"
 if "password_correct" not in st.session_state: st.session_state.password_correct = False
@@ -102,21 +112,19 @@ def read_files(files):
             except: content += f"[Error: {f.name}]\n"
     return content
 
-# ★追加関数：URLからテキストを抽出
+# URLからテキストを抽出
 def get_url_text(url):
     try:
         res = requests.get(url, timeout=10)
         res.raise_for_status()
         soup = BeautifulSoup(res.content, 'html.parser')
-        # スクリプトやスタイルシートを除外
         for script in soup(["script", "style"]):
             script.extract()
         text = soup.get_text(separator='\n')
-        # 余分な空白と改行を削除して整理
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         text = '\n'.join(chunk for chunk in chunks if chunk)
-        return text[:3000] # トークン節約のため先頭3000文字に制限
+        return text[:3000] 
     except Exception as e:
         return f"[URL読み取りエラー: {e}]"
 
@@ -150,6 +158,25 @@ with st.sidebar:
     ])
     st.divider()
     my_name = st.text_input("アドバイザー名", placeholder="山田 太郎")
+    
+    # ★追加機能：履歴表示エリア
+    st.divider()
+    st.subheader("🕒 過去の生成履歴 (最新5件)")
+    if not st.session_state.history_log:
+        st.caption("まだ履歴はありません")
+    else:
+        for i, log in enumerate(st.session_state.history_log):
+            with st.expander(f"📁 {log['time']} ({log['job']})"):
+                dl_doc = create_docx(log["combined"])
+                st.download_button(
+                    label="📥 WordでDL",
+                    data=dl_doc,
+                    file_name=f"履歴_職務経歴書_{i}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    key=f"hist_dl_{i}"
+                )
+                st.caption("■内容プレビュー")
+                st.code(log["combined"][:100] + "...", language="text")
 
 # ==========================================
 # Phase 1: 応募時 (ランク判定)
@@ -157,7 +184,7 @@ with st.sidebar:
 if app_mode == "1. 応募時 (ランク判定)":
     st.title("Phase 1: 応募時簡易分析")
     col1, col2, col3 = st.columns(3)
-    with col1: age = st.number_input("年齢", 18, 85, 25) # 85歳まで対応
+    with col1: age = st.number_input("年齢", 18, 85, 25) 
     with col2: job_changes = st.number_input("転職回数", 0, 15, 1)
     with col3: short_term = st.number_input("短期離職数", 0, 10, 0)
     
@@ -189,7 +216,7 @@ if app_mode == "1. 応募時 (ランク判定)":
         elif job_changes >= 5: job_penalty = -20
         
         st_penalty = short_term * 10
-        total = age_s + job_bonus + job_penalty - st_penalty + 5 # 補正値
+        total = age_s + job_bonus + job_penalty - st_penalty + 5 
 
         if total >= 23: cn, rc = "優秀 (Class-S)", "#00ff00"
         elif total >= 18: cn, rc = "良好 (Class-A)", "#00e5ff"
@@ -220,7 +247,6 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("🏢 企業・募集情報")
-        # ★追加：URL入力枠
         u_url_corp = st.text_input("🔗 求人票URL (自動読み取り)", placeholder="https://...")
         u_files_corp = st.file_uploader("企業求人票など (PDF/TXT)", accept_multiple_files=True, key="corp_up")
         
@@ -229,7 +255,7 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
         u_files_seeker = st.file_uploader("履歴書・面談文字起こしなど (PDF/TXT)", accept_multiple_files=True, key="seeker_up")
         achievement = st.text_area("求職者の補足事項・メモ（任意）", height=100)
         
-        # ★追加：音声入力コンポーネント
+        # 音声入力コンポーネント
         components.html("""
         <div style="font-family: sans-serif; margin-top: -10px;">
             <p style="color: #00E5FF; font-size: 14px; font-weight: bold; margin-bottom: 5px;">🎤 音声入力（面談メモ用）</p>
@@ -280,7 +306,6 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
         """, height=180)
 
     if st.button("AI書類生成を開始", type="primary"):
-        # ★変更：URLデータとファイルデータを結合
         corp_url_data = get_url_text(u_url_corp) if u_url_corp else ""
         corp_file_data = read_files(u_files_corp) if u_files_corp else ""
         corp_data = corp_file_data + "\n" + corp_url_data
@@ -353,9 +378,9 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
                     res = resp.text
                     
-                    st.markdown(f'<div class="cyber-panel"><div class="scan-line"></div><h3>AI分析評価スコア: {get_section("評価", res)}</h3><div class="fb-box">{get_section("理由とアドバイス", res)}</div></div>', unsafe_allow_html=True)
-                    
-                    st.divider()
+                    # 生成結果をセッションに記憶
+                    st.session_state.phase2_score = get_section("評価", res)
+                    st.session_state.phase2_advice = get_section("理由とアドバイス", res)
                     
                     hist = get_section('職務経歴', res)
                     pr = get_section('自己PR', res)
@@ -363,44 +388,102 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     
                     combined_history = f"{hist}\n\n■自己PR\n{pr}"
                     
-                    st.subheader("📄 職務経歴書（自己PR含む・高品質版）")
-                    st.code(combined_history, language="text")
+                    st.session_state.phase2_combined = combined_history
+                    st.session_state.phase2_motive = motive
+                    st.session_state.phase2_generated = True
+                    st.session_state.chat_messages = [] # 新規作成時はチャットをリセット
                     
-                    # ★修正箇所：ボタンが横長にならないように調整
-                    c_btn1, c_btn2, _ = st.columns([1.5, 1.5, 3])
-                    with c_btn1:
-                        docx_file = create_docx(combined_history)
-                        st.download_button(
-                            label="📥 職務経歴書をWordでDL",
-                            data=docx_file,
-                            file_name=f"職務経歴書_{time.strftime('%Y%m%d')}.docx",
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        )
-                    with c_btn2:
-                        # ★修正箇所：width: auto; にしてボタンをスリム化
-                        components.html(
-                            """
-                            <button onclick="window.parent.print()" style="
-                                background-color: transparent; 
-                                color: #00E5FF; 
-                                border: 1px solid #00E5FF; 
-                                padding: 8px 15px; 
-                                border-radius: 8px; 
-                                font-size: 14px;
-                                cursor: pointer;
-                                transition: 0.3s;
-                                width: auto;
-                            " onmouseover="this.style.backgroundColor='#00E5FF'; this.style.color='#0A192F';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#00E5FF';">
-                            🖨️ PDFで保存（印刷）
-                            </button>
-                            """, height=50
-                        )
-                    
-                    st.subheader("📄 志望動機（右上のアイコンからコピーできます）")
-                    st.code(motive, language="text")
-                    
+                    # 履歴に保存（最新5件）
+                    timestamp = time.strftime('%Y/%m/%d %H:%M')
+                    job_title = t_job if t_job else "未入力職種"
+                    st.session_state.history_log.insert(0, {
+                        "time": timestamp,
+                        "job": job_title,
+                        "combined": combined_history
+                    })
+                    if len(st.session_state.history_log) > 5:
+                        st.session_state.history_log.pop()
+                        
                 except Exception as e:
                     st.error(f"解析エラー: {e}")
+
+    # ★変更：ボタンの中ではなく、セッションの記憶を呼び出して表示する仕組み
+    if st.session_state.get("phase2_generated"):
+        st.markdown(f'<div class="cyber-panel"><div class="scan-line"></div><h3>AI分析評価スコア: {st.session_state.phase2_score}</h3><div class="fb-box">{st.session_state.phase2_advice}</div></div>', unsafe_allow_html=True)
+        st.divider()
+        
+        st.subheader("📄 職務経歴書（自己PR含む・高品質版）")
+        st.code(st.session_state.phase2_combined, language="text")
+        
+        c_btn1, c_btn2, _ = st.columns([1.5, 1.5, 3])
+        with c_btn1:
+            docx_file = create_docx(st.session_state.phase2_combined)
+            st.download_button(
+                label="📥 職務経歴書をWordでDL",
+                data=docx_file,
+                file_name=f"職務経歴書_{time.strftime('%Y%m%d')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+        with c_btn2:
+            components.html(
+                """
+                <button onclick="window.parent.print()" style="
+                    background-color: transparent; 
+                    color: #00E5FF; 
+                    border: 1px solid #00E5FF; 
+                    padding: 8px 15px; 
+                    border-radius: 8px; 
+                    font-size: 14px;
+                    cursor: pointer;
+                    transition: 0.3s;
+                    width: auto;
+                " onmouseover="this.style.backgroundColor='#00E5FF'; this.style.color='#0A192F';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#00E5FF';">
+                🖨️ PDFで保存（印刷）
+                </button>
+                """, height=50
+            )
+        
+        st.subheader("📄 志望動機（右上のアイコンからコピーできます）")
+        st.code(st.session_state.phase2_motive, language="text")
+        
+        # ==========================================
+        # 💬 AIチャット（修正依頼機能）
+        # ==========================================
+        st.divider()
+        st.subheader("💬 AIアシスタントと内容を調整する")
+        st.caption("「自己PRをもっと短く」「〇〇の経験を強調して」など、作成された書類に対する修正指示を送信できます。")
+        
+        # 過去のチャットログを表示
+        for msg in st.session_state.chat_messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+                
+        # ユーザーの新しい入力
+        if chat_input := st.chat_input("修正依頼を入力してください..."):
+            # 画面にユーザーの発言を表示
+            st.session_state.chat_messages.append({"role": "user", "content": chat_input})
+            with st.chat_message("user"):
+                st.markdown(chat_input)
+                
+            # AIの回答を生成
+            with st.chat_message("assistant"):
+                with st.spinner("AIが書類を修正中..."):
+                    chat_prompt = f"""
+あなたはプロのキャリアアドバイザーです。以下の【作成済みの書類データ】を元に、ユーザーの【修正指示】に従って回答・または修正版のテキストを出力してください。
+
+【作成済みの書類データ】
+{st.session_state.phase2_combined}
+志望動機：{st.session_state.phase2_motive}
+
+【修正指示】
+{chat_input}
+"""
+                    try:
+                        chat_resp = client.models.generate_content(model='gemini-2.5-flash', contents=chat_prompt)
+                        st.markdown(chat_resp.text)
+                        st.session_state.chat_messages.append({"role": "assistant", "content": chat_resp.text})
+                    except Exception as e:
+                        st.error(f"チャットエラー: {e}")
 
 # ==========================================
 # Phase 3: 書類作成後 (マッチ審査/推薦文)
@@ -429,7 +512,6 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("🏢 企業要件")
-            # ★追加：Phase 3にもURL入力枠を追加
             c_url_3 = st.text_input("🔗 求人票URL (自動読み取り)", key="c_url_3", placeholder="https://...")
             c_info = st.text_area("求人票の内容・求める人物像など", height=130)
             c_files = st.file_uploader("企業資料・求人票PDF", accept_multiple_files=True, key="c_up_3")
@@ -443,7 +525,6 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                 st.error("アドバイザー名を入力してください。")
             else:
                 with st.spinner("マッチ度を厳密に審査中..."):
-                    # ★変更：URLとファイルデータを結合
                     c_url_data = get_url_text(c_url_3) if c_url_3 else ""
                     c_file_data = read_files(c_files) if c_files else ""
                     c_data = c_file_data + "\n" + c_url_data
