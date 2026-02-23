@@ -83,15 +83,11 @@ def get_section(name, text):
     match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
     return match.group(1).strip() if match else f"{name}の情報が生成されませんでした。プロンプトを再確認してください。"
 
-# 職務経歴(自己PR込み)と志望動機の2つをWordに出力する関数
-def create_docx(history_text, motive_text):
+# ★変更箇所：志望動機を外し、職務経歴書（自己PR込み）だけをWordに出力する関数に変更
+def create_docx(history_text):
     doc = Document()
-    doc.add_heading('職務経歴書（自己PR含む）・志望動機', 0)
+    doc.add_heading('職務経歴書（自己PR含む）', 0)
     for line in history_text.split('\n'):
-        doc.add_paragraph(line)
-    
-    doc.add_heading('■ 志望動機', level=1)
-    for line in motive_text.split('\n'):
         doc.add_paragraph(line)
     
     bio = BytesIO()
@@ -203,7 +199,6 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
         else:
             with st.spinner("プロキャリアライターが企業と求職者の情報を深く分析中..."):
                 
-                # ★修正ポイント：職務経歴の「業務内容」と「成果」の文末ルールを厳格化しました
                 prompt = f"""
 あなたは人材紹介会社の**プロキャリアライター兼採用目線の職務経歴書編集者**です。
 提供された「企業情報」と「求職者情報」を深く分析し、企業が「ぜひ会ってみたい」と思える具体的・誠実・読みやすい書類を作成してください。
@@ -230,7 +225,6 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
 (評価の理由と、エージェントへの書類作成等で見抜くべき視点のアドバイスを記載)
 
 【職務経歴】
-※このセクション内に「職務経歴」と「自己PR」を含めて出力してください。
 1. 作成日・氏名
 2. 職務経歴（各社ごとに以下の構成を維持。必ず求職者資料の事実を元に書くこと）
    ■会社名：〇〇
@@ -243,12 +237,13 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
    ▼成果
    ・数値・改善・貢献を具体的に記載。
    ・【絶対ルール】文末は「〜ました」を禁止し、「〇〇を実現し、〇〇％改善。」「〇〇件の契約を継続的に達成。」のように言い切ること。
-3. 自己PR
-   - 企業情報に最適化された自己PR。
-   - 企業の理念・社風・仕事内容に合わせ、経験をどう活かせるか、なぜ惹かれたかを記載。
-   - 400字で構成。事実を元にし、嘘や推測は含めない。
-   - 「」や””や・などAI文章だとわかる記号は控える。文体は敬体（です・ます）。
-   - 一文は60文字以内で簡潔に。丁寧・誠実・安定感のある文体で統一。
+
+【自己PR】
+- 企業情報に最適化された自己PR。
+- 企業の理念・社風・仕事内容に合わせ、経験をどう活かせるか、なぜ惹かれたかを記載。
+- 400字で構成。事実を元にし、嘘や推測は含めない。
+- 「」や””や・などAI文章だとわかる記号は控える。文体は敬体（です・ます）。
+- 一文は60文字以内で簡潔に。丁寧・誠実・安定感のある文体で統一。
 
 【志望動機】
 - 企業情報と求職者情報を結びつけ、なぜこの企業なのかを具体的に記載。
@@ -264,21 +259,28 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     
                     st.divider()
                     
+                    # 生成された各セクションを取得
                     hist = get_section('職務経歴', res)
+                    pr = get_section('自己PR', res)
                     motive = get_section('志望動機', res)
                     
-                    st.subheader("📄 職務経歴書（自己PR含む・高品質版）")
-                    st.code(hist, language="text")
+                    # プログラムの力を使って「職務経歴」と「自己PR」を1つに合体
+                    combined_history = f"{hist}\n\n■自己PR\n{pr}"
                     
-                    docx_file = create_docx(hist, motive)
+                    st.subheader("📄 職務経歴書（自己PR含む・高品質版）")
+                    st.code(combined_history, language="text")
+                    
+                    # ★変更箇所：Wordダウンロードは「合体した職務経歴書」のみを渡す
+                    docx_file = create_docx(combined_history)
                     st.download_button(
                         label="📥 職務経歴書をWordでダウンロード",
                         data=docx_file,
-                        file_name=f"書類一括_{time.strftime('%Y%m%d')}.docx",
+                        file_name=f"職務経歴書_{time.strftime('%Y%m%d')}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
                     
-                    st.subheader("📄 志望動機")
+                    # ★変更箇所：見出しを変更し、コピーできることを明示
+                    st.subheader("📄 志望動機（右上のアイコンからコピーできます）")
                     st.code(motive, language="text")
                     
                 except Exception as e:
@@ -375,6 +377,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
