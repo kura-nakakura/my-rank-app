@@ -142,12 +142,11 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("📋 基本入力")
-        t_industry = st.text_input("志望業種")
-        t_job = st.text_input("志望職種")
-        interview_notes = st.text_area("面談メモ・実績", height=200, placeholder="実績や強みを詳しく入力してください")
+        u_files = st.file_uploader("企業資料 (PDF/TXT)", accept_multiple_files=True)
+        interview_notes = st.text_area("その他補足事項・実績", height=200, placeholder="実績や強みを詳しく入力してください")
     with col2:
         st.subheader("📂 書類添付")
-        u_files = st.file_uploader("資料 (PDF/TXT)", accept_multiple_files=True)
+        u_files = st.file_uploader("応募者資料・面談文字起こし (PDF/TXT)", accept_multiple_files=True)
 
     if st.button("AI書類生成を開始", type="primary"):
         if not t_industry or not interview_notes:
@@ -287,7 +286,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
         with col2:
             st.subheader("📄 完成書類")
             s_info = st.text_area("求職者の追加補足", height=200)
-            s_files = st.file_uploader("作成済みの履歴書・職務経歴書", accept_multiple_files=True, key="s_up_3")
+            s_files = st.file_uploader("作成済みの履歴書・職務経歴書・面談文字起こし", accept_multiple_files=True, key="s_up_3")
 
         if st.button("詳細審査 & 推薦文作成", type="primary"):
             if not my_name:
@@ -345,6 +344,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
