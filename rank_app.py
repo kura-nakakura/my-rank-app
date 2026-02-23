@@ -87,8 +87,8 @@ if app_mode == "1. 応募時 (ランク判定)":
     with col2: job_changes = st.number_input("転職回数", 0, 15, 1)
     with col3: short_term = st.number_input("短期離職数", 0, 10, 0)
     
-    if st.button("判定開始"):
-        # スコアリング
+    if st.button("ランクを判定する", type="primary"):
+        # 年齢スコア
         if age < 20: age_s = -8
         elif 20 <= age <= 21: age_s = 8
         elif 22 <= age <= 25: age_s = 10
@@ -340,6 +340,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
