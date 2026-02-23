@@ -89,11 +89,28 @@ if app_mode == "1. 応募時 (ランク判定)":
     
     if st.button("判定開始"):
         # スコアリング
-        age_s = 10 if 22 <= age <= 25 else (8 if 20 <= age <= 29 else 5)
-        job_bonus = 10 if (age <= 29 and job_changes <= 1) or (age >= 30 and job_changes <= 2) else 5
-        job_penalty = 0 if job_changes <= 1 else (-5 if job_changes == 2 else -15)
+        if age < 20: age_s = -8
+        elif 20 <= age <= 21: age_s = 8
+        elif 22 <= age <= 25: age_s = 10
+        elif 26 <= age <= 29: age_s = 8
+        elif 30 <= age <= 35: age_s = 7
+        else: age_s = 5
+
+        # 転職回数評価
+        job_bonus = 0
+        if age <= 24 and job_changes == 0: job_bonus = 10
+        elif 25 <= age <= 29 and job_changes <= 1: job_bonus = 10
+        elif 30 <= age <= 35 and job_changes <= 2: job_bonus = 10
+        elif job_changes <= 1: job_bonus = 5
+
+        # ペナルティ判定
+        job_penalty = 0
+        if job_changes == 2: job_penalty = -5
+        elif job_changes == 3: job_penalty = -10
+        elif job_changes >= 5: job_penalty = -20
+        
         st_penalty = short_term * 10
-        total = age_s + job_bonus + job_penalty - st_penalty + 5
+        total_score = age_s + job_bonus + job_penalty - st_penalty + 5 # 補正値
 
         if total >= 23: cn, rc = "優秀 (Class-S)", "#00ff00"
         elif total >= 18: cn, rc = "良好 (Class-A)", "#00e5ff"
@@ -323,6 +340,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
