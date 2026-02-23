@@ -19,6 +19,27 @@ st.markdown("""
     url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300e5ff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
+/* ★追加：サイバーパンク風パーティクル（粒子）アニメーション */
+@keyframes move-bg {
+    0% { background-position: 0 0; }
+    100% { background-position: 1000px 1000px; }
+}
+.stApp::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background-image: radial-gradient(#00E5FF 1.5px, transparent 1.5px);
+    background-size: 50px 50px;
+    opacity: 0.15;
+    animation: move-bg 30s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+.block-container {
+    position: relative;
+    z-index: 1;
+}
+
 /* 評価パネル全体のスタイル */
 .cyber-panel {
     background: rgba(23, 42, 70, 0.7);
@@ -83,7 +104,7 @@ def get_section(name, text):
     match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
     return match.group(1).strip() if match else f"{name}の情報が生成されませんでした。プロンプトを再確認してください。"
 
-# ★変更箇所：志望動機を外し、職務経歴書（自己PR込み）だけをWordに出力する関数に変更
+# 職務経歴(自己PR込み)のみをWordに出力する関数
 def create_docx(history_text):
     doc = Document()
     doc.add_heading('職務経歴書（自己PR含む）', 0)
@@ -259,18 +280,15 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     
                     st.divider()
                     
-                    # 生成された各セクションを取得
                     hist = get_section('職務経歴', res)
                     pr = get_section('自己PR', res)
                     motive = get_section('志望動機', res)
                     
-                    # プログラムの力を使って「職務経歴」と「自己PR」を1つに合体
                     combined_history = f"{hist}\n\n■自己PR\n{pr}"
                     
                     st.subheader("📄 職務経歴書（自己PR含む・高品質版）")
                     st.code(combined_history, language="text")
                     
-                    # ★変更箇所：Wordダウンロードは「合体した職務経歴書」のみを渡す
                     docx_file = create_docx(combined_history)
                     st.download_button(
                         label="📥 職務経歴書をWordでダウンロード",
@@ -279,7 +297,6 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
                     
-                    # ★変更箇所：見出しを変更し、コピーできることを明示
                     st.subheader("📄 志望動機（右上のアイコンからコピーできます）")
                     st.code(motive, language="text")
                     
