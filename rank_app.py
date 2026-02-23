@@ -7,7 +7,7 @@ from docx import Document
 from io import BytesIO
 
 # ==========================================
-# 🎨 デザイン定義（崩れを修正・視認性UP）
+# 🎨 デザイン定義（ラベルを白に、パネル崩れを修正）
 # ==========================================
 st.set_page_config(page_title="AIエージェントシステム PRO", page_icon="🤖", layout="wide")
 
@@ -28,7 +28,7 @@ st.markdown("""
     position: relative; overflow: hidden;
 }
 
-/* スキャンアニメーション（位置修正） */
+/* スキャンアニメーション */
 .scan-line {
     position: absolute; top: -100%; left: -100%; width: 300%; height: 300%;
     background: linear-gradient(to bottom, transparent, rgba(0, 229, 255, 0.4) 50%, transparent);
@@ -43,8 +43,8 @@ st.markdown("""
     padding: 15px; margin-top: 10px;
 }
 
-/* 入力ラベルの文字色を固定 */
-label p { color: #00E5FF !important; font-weight: bold !important; font-size: 1rem !important;}
+/* 入力ラベルの文字色を白に変更 */
+label p { color: #FFFFFF !important; font-weight: bold !important; font-size: 1rem !important;}
 [data-testid="stMetricValue"] { color: #00E5FF !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -75,7 +75,6 @@ def read_files(files):
     return content
 
 def get_section(name, text):
-    # より強力な正規表現に変更（大文字小文字、改行の有無に対応）
     pattern = f"【{name}】(.*?)(?=【|$)"
     match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
     return match.group(1).strip() if match else f"{name}の情報が生成されませんでした。プロンプトを再確認してください。"
@@ -85,7 +84,6 @@ def create_docx(history_text):
     doc.add_heading('職務経歴書', 0)
     for line in history_text.split('\n'):
         doc.add_paragraph(line)
-    
     bio = BytesIO()
     doc.save(bio)
     return bio.getvalue()
@@ -111,12 +109,11 @@ with st.sidebar:
 if app_mode == "1. 応募時 (ランク判定)":
     st.title("Phase 1: 応募時簡易分析")
     col1, col2, col3 = st.columns(3)
-    with col1: age = st.number_input("年齢", 18, 85, 25) # 85歳まで対応
+    with col1: age = st.number_input("年齢", 18, 85, 25)
     with col2: job_changes = st.number_input("転職回数", 0, 15, 1)
     with col3: short_term = st.number_input("短期離職数", 0, 10, 0)
     
     if st.button("ランクを判定する", type="primary"):
-        # 年齢スコア
         if age < 20: age_s = -8
         elif 20 <= age <= 21: age_s = 8
         elif 22 <= age <= 25: age_s = 10
@@ -124,7 +121,6 @@ if app_mode == "1. 応募時 (ランク判定)":
         elif 30 <= age <= 35: age_s = 7
         else: age_s = 5
 
-        # 転職回数評価
         job_bonus = 0
         if age <= 24 and job_changes == 0: job_bonus = 10
         elif 25 <= age <= 29 and job_changes <= 1: job_bonus = 10
@@ -136,14 +132,13 @@ if app_mode == "1. 応募時 (ランク判定)":
         elif 50 <= age <= 85 and job_changes <= 4: job_bonus = 5
         elif job_changes <= 1: job_bonus = 5
 
-        # ペナルティ判定
         job_penalty = 0
         if job_changes == 2: job_penalty = -5
         elif job_changes == 3: job_penalty = -10
         elif job_changes >= 5: job_penalty = -20
         
         st_penalty = short_term * 10
-        total = age_s + job_bonus + job_penalty - st_penalty + 5 # 補正値
+        total = age_s + job_bonus + job_penalty - st_penalty + 5 
 
         if total >= 23: cn, rc = "優秀 (Class-S)", "#00ff00"
         elif total >= 18: cn, rc = "良好 (Class-A)", "#00e5ff"
@@ -153,7 +148,6 @@ if app_mode == "1. 応募時 (ランク判定)":
 
         st.markdown(f'<div class="cyber-panel"><h3>判定結果: <span style="color:{rc};">{cn}</span></h3></div>', unsafe_allow_html=True)
         
-        # 優先度通知
         if total >= 15:
             st.success("NICE❕ **【エージェント指示】** 優先度：高　市場価値が高い人材です。早期の内定獲得を狙いましょう。")
         elif 7 <= total < 15:
@@ -167,7 +161,6 @@ if app_mode == "1. 応募時 (ランク判定)":
 elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
     st.title("Phase 2: 詳細分析 & 高品質書類一括作成")
     
-    # 修正：巨大な青い箱の原因となる<div>を削除し、レイアウトを整理
     c_top1, c_top2 = st.columns(2)
     with c_top1: t_ind = st.text_input("志望業種", placeholder="未入力の場合は添付資料から判断します")
     with c_top2: t_job = st.text_input("志望職種", placeholder="未入力の場合は添付資料から判断します")
@@ -183,8 +176,7 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
         u_files_seeker = st.file_uploader("履歴書・面談文字起こし (PDF/TXT)", accept_multiple_files=True, key="seeker_up")
         st.info("💡 複数の資料をアップロードすることでAIがより詳細に分析します。")
 
-    if st.button("AI書類生成を開始", type="primary", use_container_width=True):
-        # 修正：企業資料またはテキスト入力のどちらかがあればOKとするロジック
+    if st.button("AI書類生成を開始", type="primary"):
         corp_content = read_files(u_files_corp) if u_files_corp else ""
         seeker_content = read_files(u_files_seeker) if u_files_seeker else ""
         
@@ -196,7 +188,7 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
             with st.spinner("要約を禁止し、詳細に執筆中..."):
                 all_file_data = corp_content + "\n" + seeker_content
                 
-                # プロンプト（1文字も要約せず維持）
+                # プロンプト（一切要約せず100%維持）
                 prompt = f"""
 あなたは人材紹介会社の**プロキャリアライター兼採用目線の職務経歴書編集者**です。
 求職者の職歴情報と応募企業情報をもとに、企業が「ぜひ会ってみたい」と思える具体的・誠実・読みやすい書類を作成してください。
@@ -277,7 +269,6 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
                     res = resp.text
                     
-                    # 分析結果表示（パネル化）
                     st.markdown(f"""
                     <div class="cyber-panel">
                         <div class="scan-line"></div>
@@ -288,19 +279,16 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     
                     st.divider()
                     
-                    # 書類表示
                     st.subheader("📄 職務経歴（高品質版）")
                     job_history_text = get_section('職務経歴', res)
                     st.code(job_history_text, language="text")
                     
-                    # --- Wordダウンロードボタンの追加 ---
                     docx_file = create_docx(job_history_text)
                     st.download_button(
                         label="📥 職務経歴書をWordでダウンロード",
                         data=docx_file,
                         file_name=f"職務経歴書_{time.strftime('%Y%m%d')}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        use_container_width=True
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
                     
                     st.subheader("📄 自己PR（応募企業最適化）")
@@ -320,7 +308,6 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
     m_mode = st.radio("分析モード", ["1. 簡易マッチング", "2. 詳細マッチング（推薦文あり）"], horizontal=True)
     
     if m_mode == "1. 簡易マッチング":
-        # 修正：入力欄のガタガタを2カラムで綺麗に整列
         c1, c2 = st.columns(2)
         with c1: 
             m_age = st.number_input("年齢", 18, 85, 25, key="m_age_3")
@@ -330,11 +317,11 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
             m_job = st.text_input("応募職種", placeholder="例：法人営業", key="m_job_3")
             m_job_exp = st.radio("職種経験", ["あり", "なし"], horizontal=True, key="m_job_exp_3")
         
-        if st.button("簡易マッチ分析を実行", type="primary", use_container_width=True):
+        if st.button("簡易マッチ分析を実行"):
             prompt = f"年齢{m_age}歳、応募業種：{m_ind}(経験{m_ind_exp})、応募職種：{m_job}(経験{m_job_exp})。この条件での採用マッチ度(0-100%)と、その理由を簡潔に出力してください。フォーマット：【マッチ度】【理由】"
             with st.spinner("計算中..."):
                 resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
-                st.markdown(f"<div class='cyber-panel'>{resp.text}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='fb-box'>{resp.text}</div>", unsafe_allow_html=True)
             
     else:
         col1, col2 = st.columns(2)
@@ -347,12 +334,13 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
             s_info = st.text_area("求職者の追加補足", height=200)
             s_files = st.file_uploader("作成済みの書類", accept_multiple_files=True, key="s_up_3")
 
-        if st.button("詳細審査 & 推薦文作成", type="primary", use_container_width=True):
+        if st.button("詳細審査 & 推薦文作成"):
             if not my_name:
                 st.error("アドバイザー名を入力してください。")
             else:
                 with st.spinner("マッチ度を厳密に審査中..."):
-                    c_data, s_data = read_files(c_files), read_files(s_files)
+                    c_data = read_files(c_files)
+                    s_data = read_files(s_files)
                     prompt = f"""
 あなたは凄腕ヘッドハンター兼採用担当者です。
 企業要件と求職者の書類を照らし合わせ、マッチ度を％で算出し、推薦メールを作成してください。
@@ -385,7 +373,6 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                     try:
                         resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
                         res_m = resp.text
-                        
                         match_score_raw = get_section('マッチ度', res_m)
                         ms = int(re.search(r'\d+', match_score_raw).group()) if re.search(r'\d+', match_score_raw) else 0
                         
@@ -408,6 +395,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
