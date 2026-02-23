@@ -11,23 +11,55 @@ st.set_page_config(page_title="AIエージェントシステム PRO", page_icon=
 
 st.markdown("""
 <style>
+/* 全体背景 */
 .stApp {
     background-color: #0A192F;
     background-image: linear-gradient(rgba(10, 25, 47, 0.9), rgba(10, 25, 47, 0.9)),
     url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300e5ff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
+
+/* 入力・表示パネル共通 */
 .cyber-panel {
     background: rgba(23, 42, 70, 0.7);
     border: 1px solid #00E5FF;
-    box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
-    border-radius: 10px; padding: 25px; margin-top: 20px;
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 25px;
 }
+
+/* フィードバックボックス */
 .fb-box {
     background: rgba(255, 255, 255, 0.05);
     border-left: 4px solid #00E5FF;
-    padding: 15px; margin-bottom: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
 }
+
+/* 入力ウィジェットのラベル装飾 */
+.stTextInput label, .stTextArea label, .stNumberInput label, .stSelectbox label, .stRadio label {
+    color: #00E5FF !important;
+    font-weight: bold !important;
+    letter-spacing: 1px;
+}
+
+/* 入力フィールド自体の装飾 */
+.stTextInput > div > div > input, .stTextArea > div > div > textarea, .stNumberInput > div > div > input {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+    color: #E6F1FF !important;
+    border: 1px solid rgba(0, 229, 255, 0.3) !important;
+}
+
+/* メトリック値（スコア表示など） */
 [data-testid="stMetricValue"] { color: #00E5FF !important; }
+
+/* 見出しの装飾 */
+h1, h2, h3 {
+    color: #E6F1FF !important;
+    border-left: 5px solid #00E5FF;
+    padding-left: 15px;
+    margin-bottom: 20px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -344,6 +376,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
