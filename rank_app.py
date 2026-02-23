@@ -84,10 +84,15 @@ def get_section(name, text):
     match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
     return match.group(1).strip() if match else f"{name}の情報が生成されませんでした。プロンプトを再確認してください。"
 
-def create_docx(text):
+# ★変更許可箇所：自己PRを統合したため、引数を2つ（経歴と志望動機）に修正
+def create_docx(history_text, motive_text):
     doc = Document()
-    doc.add_heading('職務経歴書', 0)
-    for line in text.split('\n'):
+    doc.add_heading('職務経歴書（自己PR含む）・志望動機', 0)
+    for line in history_text.split('\n'):
+        doc.add_paragraph(line)
+    
+    doc.add_heading('■ 志望動機', level=1)
+    for line in motive_text.split('\n'):
         doc.add_paragraph(line)
     
     bio = BytesIO()
@@ -187,7 +192,6 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
         st.info("💡 複数の資料をアップロードすることでAIがより詳細に分析します。")
 
     if st.button("AI書類生成を開始", type="primary"):
-        # 修正：企業資料またはテキスト入力のどちらかがあればOKとする
         corp_data = read_files(u_files_corp) if u_files_corp else ""
         seeker_data = read_files(u_files_seeker) if u_files_seeker else ""
         
@@ -197,10 +201,9 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
             st.warning("実績を入力するか、求職者資料/文字起こしを添付してください。")
         else:
             with st.spinner("プロキャリアライターが全資料をスキャン中..."):
-                # 修正：存在しない変数 u_files ではなく結合したデータを渡す
                 file_data = corp_data + "\n" + seeker_data
                 
-                # インデントエラーを修正し、要約禁止命令を強化
+                # ★変更許可箇所：抽出用フォーマットの微調整、自己PRを【職務経歴】の中に統合
                 prompt = f"""
 あなたは人材紹介会社の**プロキャリアライター兼採用目線の職務経歴書編集者**です。
 求職者の職歴情報と応募企業情報をもとに、企業が「ぜひ会ってみたい」と思える具体的・誠実・読みやすい書類を作成してください。
@@ -232,18 +235,18 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
    ▼成果
    ・数値・改善・貢献を具体的に。
    ・抽象語を避け、「何を→どう行い→どうなったか」で構成。
-
-【自己PR】
--応募企業に最適化された自己PR
-- 応募企業の理念・社風・仕事内容に合わせ、これまでの経験をどう活かせるか。
-- 「なぜこの会社に惹かれたのか」も含める。
-- 400字で構成。事実を元にし、嘘や推測は含めない。
-- 「」や””や・などAI文章だとわかる記号は控える。
-- 文体は敬体（です・ます）。
-- 一文は60文字以内で簡潔。
-- 丁寧・誠実・安定感のある文体で統一。
+3. 自己PR
+   -応募企業に最適化された自己PR
+   - 応募企業の理念・社風・仕事内容に合わせ、これまでの経験をどう活かせるか。
+   - 「なぜこの会社に惹かれたのか」も含める。
+   - 400字で構成。事実を元にし、嘘や推測は含めない。
+   - 「」や””や・などAI文章だとわかる記号は控える。
+   - 文体は敬体（です・ます）。
+   - 一文は60文字以内で簡潔。
+   - 丁寧・誠実・安定感のある文体で統一。
 
 🔹【出力フォーマット（例）】↓
+【職務経歴】
 職務経歴書
 （作成日：◯年◯月◯日）
 （氏名：◯◯ ◯◯）
@@ -270,7 +273,6 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
 これまで〇〇業界で培った〇〇力・〇〇力を活かし、〇〇様が大切にされている〇〇の理念に共感しております。
 特に〇〇経験では〇〇という成果を上げ、〇〇力を身につけました。
 今後は〇〇として、〇〇の実現に貢献したいと考えています。
----
 
 【志望動機】
 - 企業にマイナスにならないのを前提に、年齢に合わせた文章・言葉使いにする。
@@ -281,30 +283,27 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
                     res = resp.text
                     
-                    # 分析結果表示
-                    st.metric("AI分析評価スコア", f"{get_section('評価', res)} / 10")
-                    st.markdown(f"#### 💡 エージェントへのアドバイス\n<div class='fb-box'>{get_section('理由とアドバイス', res)}</div>", unsafe_allow_html=True)
+                    st.markdown(f'<div class="cyber-panel"><div class="scan-line"></div><h3>AI分析評価スコア: {get_section("評価", res)}</h3><div class="fb-box">{get_section("理由とアドバイス", res)}</div></div>', unsafe_allow_html=True)
                     
                     st.divider()
                     
-                    # 書類表示（各セクションを確実に表示）
-                    st.subheader("📄 職務経歴（高品質版）")
-                    st.code(get_section('職務経歴', res), language="text")
-                    # --- Wordダウンロードボタンの追加 ---
-                    job_history_text = get_section('職務経歴', res)
-                    docx_file = create_docx(job_history_text)
+                    # ★変更許可箇所：自己PRの単独表示を消し、抽出した内容を表示＆Word出力
+                    hist = get_section('職務経歴', res)
+                    motive = get_section('志望動機', res)
+                    
+                    st.subheader("📄 職務経歴書（自己PR含む・高品質版）")
+                    st.code(hist, language="text")
+                    
+                    docx_file = create_docx(hist, motive)
                     st.download_button(
                         label="📥 職務経歴書をWordでダウンロード",
                         data=docx_file,
-                        file_name=f"職務経歴書_{time.strftime('%Y%m%d')}.docx",
+                        file_name=f"書類一括_{time.strftime('%Y%m%d')}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
                     
-                    st.subheader("📄 自己PR（応募企業最適化）")
-                    st.code(get_section('自己PR', res), language="text")
-                    
                     st.subheader("📄 志望動機")
-                    st.code(get_section('志望動機', res), language="text")
+                    st.code(motive, language="text")
                     
                 except Exception as e:
                     st.error(f"解析エラー: {e}")
@@ -348,7 +347,6 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                 st.error("アドバイザー名を入力してください。")
             else:
                 with st.spinner("マッチ度を厳密に審査中..."):
-                    # 修正：複数の代入を安全に行うように修正
                     c_data = read_files(c_files)
                     s_data = read_files(s_files)
                     prompt = f"""
@@ -401,6 +399,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
