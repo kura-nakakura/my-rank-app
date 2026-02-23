@@ -169,7 +169,7 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
     with col1:
         st.subheader("🏢 企業・募集情報")
         u_files_corp = st.file_uploader("企業資料 (求人票など)", accept_multiple_files=True, key="corp_up")
-        achievement = st.text_area("補足事項・実績（面談メモなど）", height=200, placeholder="ここに入力するか、文字起こしファイルを右側に添付してください")
+        achievement = st.text_area("補足事項・実績（面談メモなど）", height=200, placeholder="詳細実績を入力、または資料を右側に添付してください")
         
     with col2:
         st.subheader("📂 求職者資料・文字起こし")
@@ -177,18 +177,18 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
         st.info("💡 複数の資料をアップロードすることでAIがより詳細に分析します。")
 
     if st.button("AI書類生成を開始", type="primary"):
-        corp_content = read_files(u_files_corp) if u_files_corp else ""
-        seeker_content = read_files(u_files_seeker) if u_files_seeker else ""
+        corp_content = read_files(u_files_corp)
+        seeker_content = read_files(u_files_seeker)
         
         if not (t_ind or corp_content):
             st.warning("志望業種を入力するか、企業資料を添付してください。")
         elif not (achievement or seeker_content):
-            st.warning("実績を入力するか、求職者資料/文字起こしを添付してください。")
+            st.warning("実績を入力するか、求職者資料を添付してください。")
         else:
-            with st.spinner("要約を禁止し、詳細に執筆中..."):
-                all_file_data = corp_content + "\n" + seeker_content
+            with st.spinner("プロキャリアライターが詳細に執筆中..."):
+                all_data = corp_content + "\n" + seeker_content
                 
-                # プロンプト（一切要約せず100%維持）
+                # あなたの作成したプロンプトを1文字も要約せずそのまま維持
                 prompt = f"""
 あなたは人材紹介会社の**プロキャリアライター兼採用目線の職務経歴書編集者**です。
 求職者の職歴情報と応募企業情報をもとに、企業が「ぜひ会ってみたい」と思える具体的・誠実・読みやすい書類を作成してください。
@@ -196,7 +196,7 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
 【入力情報】
 志望業種：{t_ind if t_ind else "未入力（資料から判断せよ）"} / 職種：{t_job if t_job else "未入力（資料から判断せよ）"}
 実績・メモ：{achievement}
-添付資料：{all_file_data}
+添付資料：{all_data}
 
 ---
 以下の【】で囲まれた各セクションを、指示に従って「一切省略せずに」出力してください。
@@ -228,7 +228,7 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
 - 400字で構成。事実を元にし、嘘や推測は含めない。
 - 「」や””や・などAI文章だとわかる記号は控える。
 - 文体は敬体（です・ます）。
-- 一文は60文字以内で簡潔。
+- 一文は60文字以内で簡潔.
 - 丁寧・誠実・安定感のある文体で統一。
 
 🔹【出力フォーマット（例）】↓
@@ -272,33 +272,26 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     st.markdown(f"""
                     <div class="cyber-panel">
                         <div class="scan-line"></div>
-                        <h3>AI分析評価スコア: {get_section('評価', res)} / 10</h3>
+                        <h3>AI分析評価スコア: {get_section('評価', res)}</h3>
                         <div class='fb-box'>{get_section('理由とアドバイス', res)}</div>
                     </div>
                     """, unsafe_allow_html=True)
                     
+                    hist = get_section('職務経歴', res)
+                    pr = get_section('自己PR', res)
+                    motive = get_section('志望動機', res)
+
                     st.divider()
-                    
                     st.subheader("📄 職務経歴（高品質版）")
-                    job_history_text = get_section('職務経歴', res)
-                    st.code(job_history_text, language="text")
+                    st.code(hist, language="text")
+                    docx_file = create_docx(hist)
+                    st.download_button(label="📥 職務経歴書をWordで保存", data=docx_file, file_name=f"職務経歴書_{time.strftime('%Y%m%d')}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
                     
-                    docx_file = create_docx(job_history_text)
-                    st.download_button(
-                        label="📥 職務経歴書をWordでダウンロード",
-                        data=docx_file,
-                        file_name=f"職務経歴書_{time.strftime('%Y%m%d')}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
-                    
-                    st.subheader("📄 自己PR（応募企業最適化）")
-                    st.code(get_section('自己PR', res), language="text")
-                    
+                    st.subheader("📄 自己PR")
+                    st.code(pr, language="text")
                     st.subheader("📄 志望動機")
-                    st.code(get_section('志望動機', res), language="text")
-                    
-                except Exception as e:
-                    st.error(f"解析エラー: {e}")
+                    st.code(motive, language="text")
+                except Exception as e: st.error(f"解析エラー: {e}")
 
 # ==========================================
 # Phase 3: 書類作成後 (マッチ審査/推薦文)
@@ -395,6 +388,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
