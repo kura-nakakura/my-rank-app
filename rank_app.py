@@ -1,11 +1,13 @@
 import streamlit as st
-import streamlit.components.v1 as components  # ★追加：PDF（印刷）ボタン用コンポーネント
+import streamlit.components.v1 as components
 from google import genai
 import re
 from pypdf import PdfReader
 import time
 from docx import Document
 from io import BytesIO
+import requests
+from bs4 import BeautifulSoup
 
 # ==========================================
 # 🎨 デザイン定義
@@ -20,7 +22,7 @@ st.markdown("""
     url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300e5ff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
-/* ★追加：サイバーパンク風パーティクル（粒子）アニメーション */
+/* サイバーパンク風パーティクル（粒子）アニメーション */
 @keyframes move-bg {
     0% { background-position: 0 0; }
     100% { background-position: 1000px 1000px; }
@@ -99,6 +101,24 @@ def read_files(files):
                 for page in pdf.pages: content += (page.extract_text() or "") + "\n"
             except: content += f"[Error: {f.name}]\n"
     return content
+
+# ★追加関数：URLからテキストを抽出
+def get_url_text(url):
+    try:
+        res = requests.get(url, timeout=10)
+        res.raise_for_status()
+        soup = BeautifulSoup(res.content, 'html.parser')
+        # スクリプトやスタイルシートを除外
+        for script in soup(["script", "style"]):
+            script.extract()
+        text = soup.get_text(separator='\n')
+        # 余分な空白と改行を削除して整理
+        lines = (line.strip() for line in text.splitlines())
+        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        text = '\n'.join(chunk for chunk in chunks if chunk)
+        return text[:3000] # トークン節約のため先頭3000文字に制限
+    except Exception as e:
+        return f"[URL読み取りエラー: {e}]"
 
 def get_section(name, text):
     pattern = f"【{name}】(.*?)(?=【|$)"
@@ -200,22 +220,78 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("🏢 企業・募集情報")
+        # ★追加：URL入力枠
+        u_url_corp = st.text_input("🔗 求人票URL (自動読み取り)", placeholder="https://...")
         u_files_corp = st.file_uploader("企業求人票など (PDF/TXT)", accept_multiple_files=True, key="corp_up")
         
     with col2:
         st.subheader("📂 求職者情報")
         u_files_seeker = st.file_uploader("履歴書・面談文字起こしなど (PDF/TXT)", accept_multiple_files=True, key="seeker_up")
         achievement = st.text_area("求職者の補足事項・メモ（任意）", height=100)
+        
+        # ★追加：音声入力コンポーネント
+        components.html("""
+        <div style="font-family: sans-serif; margin-top: -10px;">
+            <p style="color: #00E5FF; font-size: 14px; font-weight: bold; margin-bottom: 5px;">🎤 音声入力（面談メモ用）</p>
+            <button id="start-btn" style="background: transparent; color: #00E5FF; border: 1px solid #00E5FF; border-radius: 5px; padding: 5px 10px; cursor: pointer;">🔴 録音開始</button>
+            <button id="stop-btn" style="background: transparent; color: #ff4b4b; border: 1px solid #ff4b4b; border-radius: 5px; padding: 5px 10px; cursor: pointer;" disabled>⏹ 停止</button>
+            <p id="status" style="color: #FFFFFF; font-size: 12px; margin-top: 5px;">マイクを許可して話し、結果をコピーして上の枠に貼り付けてください。</p>
+            <textarea id="result" style="width: 100%; height: 70px; background: rgba(0,0,0,0.3); color: white; border: 1px solid #00E5FF; border-radius: 5px; padding: 5px;"></textarea>
+        </div>
+        <script>
+            const startBtn = document.getElementById('start-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            const resultArea = document.getElementById('result');
+            const status = document.getElementById('status');
+            let recognition;
+
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.lang = 'ja-JP';
+                recognition.continuous = true;
+                recognition.interimResults = true;
+
+                recognition.onstart = function() {
+                    status.innerText = '録音中... 話してください';
+                    startBtn.disabled = true; stopBtn.disabled = false;
+                };
+                recognition.onresult = function(event) {
+                    let finalTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+                    }
+                    if(finalTranscript) resultArea.value += finalTranscript + '\\n';
+                };
+                recognition.onerror = function(event) {
+                    status.innerText = 'エラー: ' + event.error;
+                    startBtn.disabled = false; stopBtn.disabled = true;
+                };
+                recognition.onend = function() {
+                    status.innerText = '録音停止。テキストをコピーして使用してください。';
+                    startBtn.disabled = false; stopBtn.disabled = true;
+                };
+                startBtn.onclick = () => recognition.start();
+                stopBtn.onclick = () => recognition.stop();
+            } else {
+                status.innerText = 'お使いのブラウザは音声認識非対応です（Chromeを推奨）';
+                startBtn.disabled = true;
+            }
+        </script>
+        """, height=180)
 
     if st.button("AI書類生成を開始", type="primary"):
-        corp_data = read_files(u_files_corp) if u_files_corp else ""
+        # ★変更：URLデータとファイルデータを結合
+        corp_url_data = get_url_text(u_url_corp) if u_url_corp else ""
+        corp_file_data = read_files(u_files_corp) if u_files_corp else ""
+        corp_data = corp_file_data + "\n" + corp_url_data
+        
         seeker_data = read_files(u_files_seeker) if u_files_seeker else ""
         
-        has_corp_info = bool(t_ind or t_job or corp_data)
-        has_seeker_info = bool(achievement or seeker_data)
+        has_corp_info = bool(t_ind or t_job or corp_data.strip())
+        has_seeker_info = bool(achievement or seeker_data.strip())
         
         if not has_corp_info:
-            st.warning("企業情報（志望業種・職種、または求人票の添付）を入力してください。")
+            st.warning("企業情報（志望業種・職種、URL、または求人票の添付）を入力してください。")
         elif not has_seeker_info:
             st.warning("求職者情報（履歴書・文字起こしの添付、またはメモ）を入力してください。")
         else:
@@ -290,17 +366,18 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     st.subheader("📄 職務経歴書（自己PR含む・高品質版）")
                     st.code(combined_history, language="text")
                     
-                    # ★変更箇所：WordダウンロードボタンとPDF印刷ボタンを横に並べて配置
-                    c_btn1, c_btn2 = st.columns([1, 1])
+                    # ★修正箇所：ボタンが横長にならないように調整
+                    c_btn1, c_btn2, _ = st.columns([1.5, 1.5, 3])
                     with c_btn1:
                         docx_file = create_docx(combined_history)
                         st.download_button(
-                            label="📥 職務経歴書をWordでダウンロード",
+                            label="📥 職務経歴書をWordでDL",
                             data=docx_file,
                             file_name=f"職務経歴書_{time.strftime('%Y%m%d')}.docx",
                             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                         )
                     with c_btn2:
+                        # ★修正箇所：width: auto; にしてボタンをスリム化
                         components.html(
                             """
                             <button onclick="window.parent.print()" style="
@@ -312,13 +389,12 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                                 font-size: 14px;
                                 cursor: pointer;
                                 transition: 0.3s;
-                                width: 100%;
+                                width: auto;
                             " onmouseover="this.style.backgroundColor='#00E5FF'; this.style.color='#0A192F';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#00E5FF';">
-                            🖨️ PDFで保存（印刷プレビュー）
+                            🖨️ PDFで保存（印刷）
                             </button>
                             """, height=50
                         )
-                        st.caption("※PDF保存の際、ブラウザの印刷設定で「背景のグラフィック」をオンにすると綺麗に保存できます。")
                     
                     st.subheader("📄 志望動機（右上のアイコンからコピーできます）")
                     st.code(motive, language="text")
@@ -353,7 +429,9 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("🏢 企業要件")
-            c_info = st.text_area("求人票の内容・求める人物像など", height=200)
+            # ★追加：Phase 3にもURL入力枠を追加
+            c_url_3 = st.text_input("🔗 求人票URL (自動読み取り)", key="c_url_3", placeholder="https://...")
+            c_info = st.text_area("求人票の内容・求める人物像など", height=130)
             c_files = st.file_uploader("企業資料・求人票PDF", accept_multiple_files=True, key="c_up_3")
         with col2:
             st.subheader("📄 完成書類")
@@ -365,8 +443,13 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                 st.error("アドバイザー名を入力してください。")
             else:
                 with st.spinner("マッチ度を厳密に審査中..."):
-                    c_data = read_files(c_files)
+                    # ★変更：URLとファイルデータを結合
+                    c_url_data = get_url_text(c_url_3) if c_url_3 else ""
+                    c_file_data = read_files(c_files) if c_files else ""
+                    c_data = c_file_data + "\n" + c_url_data
+                    
                     s_data = read_files(s_files)
+                    
                     prompt = f"""
 あなたは凄腕ヘッドハンター兼採用担当者です。
 企業要件と求職者の書類を照らし合わせ、マッチ度を％で算出し、推薦メールを作成してください。
@@ -417,58 +500,3 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
