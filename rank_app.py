@@ -11,43 +11,83 @@ from io import BytesIO
 # ==========================================
 st.set_page_config(page_title="AIエージェントシステム PRO", page_icon="🤖", layout="wide")
 
+
+
 st.markdown("""
+
 <style>
+
 .stApp {
+
     background-color: #0A192F;
+
     background-image: linear-gradient(rgba(10, 25, 47, 0.9), rgba(10, 25, 47, 0.9)),
+
     url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300e5ff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+
 }
+
+
 
 /* 評価パネル全体のスタイル */
+
 .cyber-panel {
+
     background: rgba(23, 42, 70, 0.7);
+
     border: 1px solid #00E5FF;
+
     box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+
     border-radius: 10px; padding: 25px; margin-top: 20px;
+
     position: relative; overflow: hidden;
+
 }
 
-/* スキャンアニメーション */
+
+
+/* スキャンアニメーション（位置修正） */
+
 .scan-line {
+
     position: absolute; top: -100%; left: -100%; width: 300%; height: 300%;
+
     background: linear-gradient(to bottom, transparent, rgba(0, 229, 255, 0.4) 50%, transparent);
+
     transform: rotate(45deg); animation: scan 2.5s ease-in-out forwards; pointer-events: none;
+
 }
+
 @keyframes scan { 0% { top: -150%; } 100% { top: 150%; } }
+
 @keyframes flash-fade { 0% { opacity: 1; } 100% { opacity: 0; } }
 
+
+
 .fb-box {
+
     background: rgba(255, 255, 255, 0.05);
+
     border-left: 4px solid #00E5FF;
+
     padding: 15px; margin-top: 10px;
+
 }
 
+
+
 /* 入力ラベルの文字色を固定 */
+
 label p { color: #00E5FF !important; font-weight: bold !important; font-size: 1rem !important;}
+
 [data-testid="stMetricValue"] { color: #00E5FF !important; }
+
 </style>
+
 """, unsafe_allow_html=True)
+
+
 
 # --- セキュリティ ---
 LOGIN_PASSWORD = "HR9237"
@@ -400,6 +440,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
