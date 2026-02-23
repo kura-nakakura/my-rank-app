@@ -3,6 +3,8 @@ from google import genai
 import re
 from pypdf import PdfReader
 import time
+from docx import Document
+from io import BytesIO
 
 # ==========================================
 # 🎨 デザイン定義
@@ -83,6 +85,16 @@ def get_section(name, text):
     pattern = f"【{name}】(.*?)(?=【|$)"
     match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
     return match.group(1).strip() if match else f"{name}の情報が生成されませんでした。プロンプトを再確認してください。"
+
+def create_docx(text):
+    doc = Document()
+    doc.add_heading('職務経歴書', 0)
+    for line in text.split('\n'):
+        doc.add_paragraph(line)
+    
+    bio = BytesIO()
+    doc.save(bio)
+    return bio.getvalue()
 
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
@@ -284,6 +296,16 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     # 書類表示（各セクションを確実に表示）
                     st.subheader("📄 職務経歴（高品質版）")
                     st.code(get_section('職務経歴', res), language="text")
+                    # --- Wordダウンロードボタンの追加 ---
+                    job_history_text = get_section('職務経歴', res)
+                    docx_file = create_docx(job_history_text)
+                    st.download_button(
+                        label="📥 職務経歴書をWordでダウンロード",
+                        data=docx_file,
+                        file_name=f"職務経歴書_{time.strftime('%Y%m%d')}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        use_container_width=True
+                    )
                     
                     st.subheader("📄 自己PR（応募企業最適化）")
                     st.code(get_section('自己PR', res), language="text")
@@ -384,6 +406,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
