@@ -28,7 +28,7 @@ st.markdown("""
     position: relative; overflow: hidden;
 }
 
-/* スキャンアニメーション（位置修正） */
+/* スキャンアニメーション */
 .scan-line {
     position: absolute; top: -100%; left: -100%; width: 300%; height: 300%;
     background: linear-gradient(to bottom, transparent, rgba(0, 229, 255, 0.4) 50%, transparent);
@@ -79,12 +79,11 @@ def read_files(files):
     return content
 
 def get_section(name, text):
-    # より強力な正規表現に変更（大文字小文字、改行の有無に対応）
     pattern = f"【{name}】(.*?)(?=【|$)"
     match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
     return match.group(1).strip() if match else f"{name}の情報が生成されませんでした。プロンプトを再確認してください。"
 
-# ★変更許可箇所：自己PRを統合したため、引数を2つ（経歴と志望動機）に修正
+# 職務経歴(自己PR込み)と志望動機の2つをWordに出力する関数
 def create_docx(history_text, motive_text):
     doc = Document()
     doc.add_heading('職務経歴書（自己PR含む）・志望動機', 0)
@@ -183,38 +182,47 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("🏢 企業・募集情報")
-        u_files_corp = st.file_uploader("企業資料 (求人票など)", accept_multiple_files=True, key="corp_up")
-        achievement = st.text_area("補足事項・実績（面談メモなど）", height=200, placeholder="ここに入力するか、文字起こしファイルを右側に添付してください")
+        u_files_corp = st.file_uploader("企業求人票など (PDF/TXT)", accept_multiple_files=True, key="corp_up")
         
     with col2:
-        st.subheader("📂 求職者資料・文字起こし")
-        u_files_seeker = st.file_uploader("履歴書・面談文字起こし (PDF/TXT)", accept_multiple_files=True, key="seeker_up")
-        st.info("💡 複数の資料をアップロードすることでAIがより詳細に分析します。")
+        st.subheader("📂 求職者情報")
+        u_files_seeker = st.file_uploader("履歴書・面談文字起こしなど (PDF/TXT)", accept_multiple_files=True, key="seeker_up")
+        achievement = st.text_area("求職者の補足事項・メモ（任意）", height=100)
 
     if st.button("AI書類生成を開始", type="primary"):
         corp_data = read_files(u_files_corp) if u_files_corp else ""
         seeker_data = read_files(u_files_seeker) if u_files_seeker else ""
         
-        if not (t_ind or corp_data):
-            st.warning("志望業種を入力するか、企業資料を添付してください。")
-        elif not (achievement or seeker_data):
-            st.warning("実績を入力するか、求職者資料/文字起こしを添付してください。")
+        # 理想通り、企業情報と求職者情報がそれぞれあるかチェック
+        has_corp_info = bool(t_ind or t_job or corp_data)
+        has_seeker_info = bool(achievement or seeker_data)
+        
+        if not has_corp_info:
+            st.warning("企業情報（志望業種・職種、または求人票の添付）を入力してください。")
+        elif not has_seeker_info:
+            st.warning("求職者情報（履歴書・文字起こしの添付、またはメモ）を入力してください。")
         else:
-            with st.spinner("プロキャリアライターが全資料をスキャン中..."):
-                file_data = corp_data + "\n" + seeker_data
+            with st.spinner("プロキャリアライターが企業と求職者の情報を深く分析中..."):
                 
-                # ★変更許可箇所：抽出用フォーマットの微調整、自己PRを【職務経歴】の中に統合
+                # AIが混乱しないよう、情報を完全に構造化して渡すプロンプト
                 prompt = f"""
 あなたは人材紹介会社の**プロキャリアライター兼採用目線の職務経歴書編集者**です。
-求職者の職歴情報と応募企業情報をもとに、企業が「ぜひ会ってみたい」と思える具体的・誠実・読みやすい書類を作成してください。
+提供された「企業情報」と「求職者情報」を深く分析し、企業が「ぜひ会ってみたい」と思える具体的・誠実・読みやすい書類を作成してください。
 
-【入力情報】
-志望業種：{t_ind} / 職種：{t_job}
-実績・メモ：{achievement}
-添付資料：{file_data}
+【入力：企業情報】
+志望業種：{t_ind if t_ind else "未入力（企業資料から判断してください）"}
+志望職種：{t_job if t_job else "未入力（企業資料から判断してください）"}
+企業側資料：{corp_data if corp_data else "なし"}
+
+【入力：求職者情報】
+補足メモ：{achievement if achievement else "なし"}
+求職者側資料（履歴書・面談文字起こし等）：{seeker_data if seeker_data else "なし"}
 
 ---
-以下の【】で囲まれた各セクションを、指示に従って「一切省略せずに」出力してください。
+【重要ルール】
+- 提供された「求職者情報」から、実際の経験・業務内容・成果を具体的に抽出し、必ず書類に反映させてください。架空の経験は絶対に書かないでください。
+- 「企業情報」の求める人物像に合わせ、求職者の強みを最適化して記載してください。
+- 以下の【】で囲まれた各セクションを、「一切省略せずに」出力してください。
 
 【評価】
 (S最高/A良き！/Bいい感じ/C要努力/Z測定不能のみ)
@@ -223,58 +231,27 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
 (評価の理由と、エージェントへの書類作成等で見抜くべき視点のアドバイスを記載)
 
 【職務経歴】
-**下記職務経歴書自動生成プロンプト出力ルール**に従って作成してください。
+※このセクション内に「職務経歴」と「自己PR」を含めて出力してください。
 1. 作成日・氏名
-2. 職務経歴（各社ごとに以下の構成を維持）
-   【会社名】
-   雇用形態：◯◯
-   事業内容：◯◯
-   役職：◯◯
+2. 職務経歴（各社ごとに以下の構成を維持。必ず求職者資料の事実を元に書くこと）
+   ■会社名：〇〇
+   雇用形態：〇〇
+   事業内容：〇〇
+   役職：〇〇
    ▼業務内容
-   ・主要業務を5〜7行で簡潔に。例：「売上管理」「顧客対応」「教育・運営」「営業活動」など動作中心で記載。
+   ・主要業務を5〜7行で簡潔に記載。（例・〇〇業務を担当し、〇〇を実施。・〇〇を通じて〇〇に貢献。）
    ▼成果
-   ・数値・改善・貢献を具体的に。
-   ・抽象語を避け、「何を→どう行い→どうなったか」で構成。
+   ・数値・改善・貢献を具体的に記載。（例・〇〇を実現し、〇〇％改善。・〇〇件の契約・販売を継続的に達成。）
+   ※以下同様に記載
 3. 自己PR
-   -応募企業に最適化された自己PR
-   - 応募企業の理念・社風・仕事内容に合わせ、これまでの経験をどう活かせるか。
-   - 「なぜこの会社に惹かれたのか」も含める。
+   - 企業情報に最適化された自己PR。
+   - 企業の理念・社風・仕事内容に合わせ、経験をどう活かせるか、なぜ惹かれたかを記載。
    - 400字で構成。事実を元にし、嘘や推測は含めない。
-   - 「」や””や・などAI文章だとわかる記号は控える。
-   - 文体は敬体（です・ます）。
-   - 一文は60文字以内で簡潔。
-   - 丁寧・誠実・安定感のある文体で統一。
-
-🔹【出力フォーマット（例）】↓
-【職務経歴】
-職務経歴書
-（作成日：◯年◯月◯日）
-（氏名：◯◯ ◯◯）
-
----
-■職務経歴
-【会社名】
-雇用形態：正社員
-事業内容：〇〇
-役職：〇〇
-
-▼業務内容
-・〇〇業務を担当し、〇〇を実施。
-・〇〇を通じて〇〇に貢献。
-
-▼成果
-・〇〇を実現し、〇〇％改善。
-・〇〇件の契約・販売を継続的に達成。
-等、実際の情報を基に記載する
-（以下同様に記載）
----
-■自己PR
-
-これまで〇〇業界で培った〇〇力・〇〇力を活かし、〇〇様が大切にされている〇〇の理念に共感しております。
-特に〇〇経験では〇〇という成果を上げ、〇〇力を身につけました。
-今後は〇〇として、〇〇の実現に貢献したいと考えています。
+   - 「」や””や・などAI文章だとわかる記号は控える。文体は敬体（です・ます）。
+   - 一文は60文字以内で簡潔に。丁寧・誠実・安定感のある文体で統一。
 
 【志望動機】
+- 企業情報と求職者情報を結びつけ、なぜこの企業なのかを具体的に記載。
 - 企業にマイナスにならないのを前提に、年齢に合わせた文章・言葉使いにする。
 - 約450字で作成。業務や実績は推測や嘘を避ける。
 - 「」や””や・などは控える。
@@ -287,13 +264,14 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     
                     st.divider()
                     
-                    # ★変更許可箇所：自己PRの単独表示を消し、抽出した内容を表示＆Word出力
+                    # 職務経歴（自己PR込み）と志望動機のみを抽出
                     hist = get_section('職務経歴', res)
                     motive = get_section('志望動機', res)
                     
                     st.subheader("📄 職務経歴書（自己PR含む・高品質版）")
                     st.code(hist, language="text")
                     
+                    # Wordダウンロードボタン（経歴と志望動機の2つを渡す）
                     docx_file = create_docx(hist, motive)
                     st.download_button(
                         label="📥 職務経歴書をWordでダウンロード",
@@ -399,6 +377,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
