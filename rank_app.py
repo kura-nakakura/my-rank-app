@@ -43,8 +43,12 @@ st.markdown("""
     padding: 15px; margin-top: 10px;
 }
 
-/* 入力ラベルの文字色を固定 */
-label p { color: #00E5FF !important; font-weight: bold !important; font-size: 1rem !important;}
+/* 入力ラベルの文字色を白に固定 */
+label p, .stTextInput label, .stNumberInput label, .stTextArea label, .stRadio label, .stSelectbox label { 
+    color: #FFFFFF !important; 
+    font-weight: bold !important; 
+    font-size: 1rem !important;
+}
 [data-testid="stMetricValue"] { color: #00E5FF !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -167,29 +171,22 @@ if app_mode == "1. 応募時 (ランク判定)":
 elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
     st.title("Phase 2: 詳細分析 & 高品質書類一括作成")
     
-    st.markdown('<div class="cyber-panel">', unsafe_allow_html=True)
     c_top1, c_top2 = st.columns(2)
-    # ★修正箇所1：st.が抜けていたのを修正しました
     with c_top1: t_ind = st.text_input("志望業種", placeholder="未入力の場合は添付資料から判断します")
     with c_top2: t_job = st.text_input("志望職種", placeholder="未入力の場合は添付資料から判断します")
-    st.markdown('</div>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown('<div class="cyber-panel" style="min-height:450px;">', unsafe_allow_html=True)
         st.subheader("🏢 企業・募集情報")
         u_files_corp = st.file_uploader("企業資料 (求人票など)", accept_multiple_files=True, key="corp_up")
         achievement = st.text_area("補足事項・実績（面談メモなど）", height=200, placeholder="ここに入力するか、文字起こしファイルを右側に添付してください")
-        st.markdown("</div>", unsafe_allow_html=True)
         
     with col2:
-        st.markdown('<div class="cyber-panel" style="min-height:450px;">', unsafe_allow_html=True)
         st.subheader("📂 求職者資料・文字起こし")
         u_files_seeker = st.file_uploader("履歴書・面談文字起こし (PDF/TXT)", accept_multiple_files=True, key="seeker_up")
         st.info("💡 複数の資料をアップロードすることでAIがより詳細に分析します。")
-        st.markdown("</div>", unsafe_allow_html=True)
 
-    if st.button("AI書類生成を開始", type="primary", use_container_width=True):
+    if st.button("AI書類生成を開始", type="primary"):
         # 修正：企業資料またはテキスト入力のどちらかがあればOKとする
         corp_data = read_files(u_files_corp) if u_files_corp else ""
         seeker_data = read_files(u_files_seeker) if u_files_seeker else ""
@@ -200,7 +197,7 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
             st.warning("実績を入力するか、求職者資料/文字起こしを添付してください。")
         else:
             with st.spinner("プロキャリアライターが全資料をスキャン中..."):
-                # ★修正箇所2：u_filesという存在しない変数ではなく、読み込んだデータを結合して渡すように修正しました
+                # 修正：存在しない変数 u_files ではなく結合したデータを渡す
                 file_data = corp_data + "\n" + seeker_data
                 
                 # インデントエラーを修正し、要約禁止命令を強化
@@ -300,8 +297,7 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                         label="📥 職務経歴書をWordでダウンロード",
                         data=docx_file,
                         file_name=f"職務経歴書_{time.strftime('%Y%m%d')}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        use_container_width=True
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
                     
                     st.subheader("📄 自己PR（応募企業最適化）")
@@ -352,7 +348,9 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                 st.error("アドバイザー名を入力してください。")
             else:
                 with st.spinner("マッチ度を厳密に審査中..."):
-                    c_data, s_data = read_files(c_files), read_files(s_files)
+                    # 修正：複数の代入を安全に行うように修正
+                    c_data = read_files(c_files)
+                    s_data = read_files(s_files)
                     prompt = f"""
 あなたは凄腕ヘッドハンター兼採用担当者です。
 企業要件と求職者の書類を照らし合わせ、マッチ度を％で算出し、推薦メールを作成してください。
