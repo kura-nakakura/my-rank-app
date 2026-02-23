@@ -100,7 +100,12 @@ if app_mode == "1. 応募時 (ランク判定)":
         job_bonus = 0
         if age <= 24 and job_changes == 0: job_bonus = 10
         elif 25 <= age <= 29 and job_changes <= 1: job_bonus = 10
+        elif 25 <= age <= 29 and job_changes <= 2: job_bonus = 7
         elif 30 <= age <= 35 and job_changes <= 2: job_bonus = 10
+        elif 30 <= age <= 35 and job_changes <= 3: job_bonus = 7
+        elif 35 <= age <= 85 and job_changes <= 2: job_bonus = 10
+        elif 35 <= age <= 85 and job_changes <= 3: job_bonus = 7
+        elif 50 <= age <= 85 and job_changes <= 4: job_bonus = 5
         elif job_changes <= 1: job_bonus = 5
 
         # ペナルティ判定
@@ -340,6 +345,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
