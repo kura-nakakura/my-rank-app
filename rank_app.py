@@ -131,7 +131,6 @@ elif app_mode == "2. 初回面談後 (詳細分析/高品質書類作成)":
     if st.button("AI書類生成を開始", type="primary"):
         with st.spinner("プロフェッショナルな書類を作成中..."):
             file_data = read_files(u_files)
-                # あなたの高品質プロンプトを「システム指示」として完全反映
             prompt = f"""
 あなたは人材紹介会社の**プロキャリアライター兼採用目線の職務経歴書編集者**です。
 求職者の職歴情報と応募企業情報をもとに、企業が「ぜひ会ってみたい」と思える具体的・誠実・読みやすい書類を作成してください。
@@ -321,6 +320,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
