@@ -110,7 +110,7 @@ if app_mode == "1. 応募時 (ランク判定)":
         elif job_changes >= 5: job_penalty = -20
         
         st_penalty = short_term * 10
-        total_score = age_s + job_bonus + job_penalty - st_penalty + 5 # 補正値
+        total = age_s + job_bonus + job_penalty - st_penalty + 5 # 補正値
 
         if total >= 23: cn, rc = "優秀 (Class-S)", "#00ff00"
         elif total >= 18: cn, rc = "良好 (Class-A)", "#00e5ff"
@@ -340,6 +340,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
