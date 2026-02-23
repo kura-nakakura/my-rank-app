@@ -7,86 +7,47 @@ from docx import Document
 from io import BytesIO
 
 # ==========================================
-# 🎨 デザイン定義
+# 🎨 デザイン定義（崩れを修正・視認性UP）
 # ==========================================
 st.set_page_config(page_title="AIエージェントシステム PRO", page_icon="🤖", layout="wide")
 
-
-
 st.markdown("""
-
 <style>
-
 .stApp {
-
     background-color: #0A192F;
-
     background-image: linear-gradient(rgba(10, 25, 47, 0.9), rgba(10, 25, 47, 0.9)),
-
     url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300e5ff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-
 }
-
-
 
 /* 評価パネル全体のスタイル */
-
 .cyber-panel {
-
     background: rgba(23, 42, 70, 0.7);
-
     border: 1px solid #00E5FF;
-
     box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
-
     border-radius: 10px; padding: 25px; margin-top: 20px;
-
     position: relative; overflow: hidden;
-
 }
-
-
 
 /* スキャンアニメーション（位置修正） */
-
 .scan-line {
-
     position: absolute; top: -100%; left: -100%; width: 300%; height: 300%;
-
     background: linear-gradient(to bottom, transparent, rgba(0, 229, 255, 0.4) 50%, transparent);
-
     transform: rotate(45deg); animation: scan 2.5s ease-in-out forwards; pointer-events: none;
-
 }
-
 @keyframes scan { 0% { top: -150%; } 100% { top: 150%; } }
-
 @keyframes flash-fade { 0% { opacity: 1; } 100% { opacity: 0; } }
 
-
-
 .fb-box {
-
     background: rgba(255, 255, 255, 0.05);
-
     border-left: 4px solid #00E5FF;
-
     padding: 15px; margin-top: 10px;
-
 }
 
-
-
 /* 入力ラベルの文字色を固定 */
-
 label p { color: #00E5FF !important; font-weight: bold !important; font-size: 1rem !important;}
-
 [data-testid="stMetricValue"] { color: #00E5FF !important; }
-
 </style>
-
 """, unsafe_allow_html=True)
-
 
 # --- セキュリティ ---
 LOGIN_PASSWORD = "HR9237"
@@ -119,10 +80,10 @@ def get_section(name, text):
     match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
     return match.group(1).strip() if match else f"{name}の情報が生成されませんでした。プロンプトを再確認してください。"
 
-def create_docx(text):
+def create_docx(history_text):
     doc = Document()
     doc.add_heading('職務経歴書', 0)
-    for line in text.split('\n'):
+    for line in history_text.split('\n'):
         doc.add_paragraph(line)
     
     bio = BytesIO()
@@ -192,7 +153,7 @@ if app_mode == "1. 応募時 (ランク判定)":
 
         st.markdown(f'<div class="cyber-panel"><h3>判定結果: <span style="color:{rc};">{cn}</span></h3></div>', unsafe_allow_html=True)
         
-        # 優先度通知（高・中・低の分離を徹底）
+        # 優先度通知
         if total >= 15:
             st.success("NICE❕ **【エージェント指示】** 優先度：高　市場価値が高い人材です。早期の内定獲得を狙いましょう。")
         elif 7 <= total < 15:
@@ -206,48 +167,44 @@ if app_mode == "1. 応募時 (ランク判定)":
 elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
     st.title("Phase 2: 詳細分析 & 高品質書類一括作成")
     
-    st.markdown('<div class="cyber-panel">', unsafe_allow_html=True)
+    # 修正：巨大な青い箱の原因となる<div>を削除し、レイアウトを整理
     c_top1, c_top2 = st.columns(2)
     with c_top1: t_ind = st.text_input("志望業種", placeholder="未入力の場合は添付資料から判断します")
     with c_top2: t_job = st.text_input("志望職種", placeholder="未入力の場合は添付資料から判断します")
-    st.markdown('</div>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown('<div class="cyber-panel" style="min-height:450px;">', unsafe_allow_html=True)
         st.subheader("🏢 企業・募集情報")
         u_files_corp = st.file_uploader("企業資料 (求人票など)", accept_multiple_files=True, key="corp_up")
         achievement = st.text_area("補足事項・実績（面談メモなど）", height=200, placeholder="ここに入力するか、文字起こしファイルを右側に添付してください")
-        st.markdown("</div>", unsafe_allow_html=True)
         
     with col2:
-        st.markdown('<div class="cyber-panel" style="min-height:450px;">', unsafe_allow_html=True)
         st.subheader("📂 求職者資料・文字起こし")
         u_files_seeker = st.file_uploader("履歴書・面談文字起こし (PDF/TXT)", accept_multiple_files=True, key="seeker_up")
         st.info("💡 複数の資料をアップロードすることでAIがより詳細に分析します。")
-        st.markdown("</div>", unsafe_allow_html=True)
 
     if st.button("AI書類生成を開始", type="primary", use_container_width=True):
-        # 修正：企業資料またはテキスト入力のどちらかがあればOKとする
-        corp_data = read_files(u_files_corp) if u_files_corp else ""
-        seeker_data = read_files(u_files_seeker) if u_files_seeker else ""
+        # 修正：企業資料またはテキスト入力のどちらかがあればOKとするロジック
+        corp_content = read_files(u_files_corp) if u_files_corp else ""
+        seeker_content = read_files(u_files_seeker) if u_files_seeker else ""
         
-        if not (t_ind or corp_data):
+        if not (t_ind or corp_content):
             st.warning("志望業種を入力するか、企業資料を添付してください。")
-        elif not (achievement or seeker_data):
+        elif not (achievement or seeker_content):
             st.warning("実績を入力するか、求職者資料/文字起こしを添付してください。")
         else:
-            with st.spinner("プロキャリアライターが全資料をスキャン中..."):
-                file_data = read_files(u_files)
-                # インデントエラーを修正し、要約禁止命令を強化
+            with st.spinner("要約を禁止し、詳細に執筆中..."):
+                all_file_data = corp_content + "\n" + seeker_content
+                
+                # プロンプト（1文字も要約せず維持）
                 prompt = f"""
 あなたは人材紹介会社の**プロキャリアライター兼採用目線の職務経歴書編集者**です。
 求職者の職歴情報と応募企業情報をもとに、企業が「ぜひ会ってみたい」と思える具体的・誠実・読みやすい書類を作成してください。
 
 【入力情報】
-志望業種：{t_ind} / 職種：{t_job}
+志望業種：{t_ind if t_ind else "未入力（資料から判断せよ）"} / 職種：{t_job if t_job else "未入力（資料から判断せよ）"}
 実績・メモ：{achievement}
-添付資料：{file_data}
+添付資料：{all_file_data}
 
 ---
 以下の【】で囲まれた各セクションを、指示に従って「一切省略せずに」出力してください。
@@ -320,17 +277,23 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
                     res = resp.text
                     
-                    # 分析結果表示
-                    st.metric("AI分析評価スコア", f"{get_section('評価', res)} / 10")
-                    st.markdown(f"#### 💡 エージェントへのアドバイス\n<div class='fb-box'>{get_section('理由とアドバイス', res)}</div>", unsafe_allow_html=True)
+                    # 分析結果表示（パネル化）
+                    st.markdown(f"""
+                    <div class="cyber-panel">
+                        <div class="scan-line"></div>
+                        <h3>AI分析評価スコア: {get_section('評価', res)} / 10</h3>
+                        <div class='fb-box'>{get_section('理由とアドバイス', res)}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
                     st.divider()
                     
-                    # 書類表示（各セクションを確実に表示）
+                    # 書類表示
                     st.subheader("📄 職務経歴（高品質版）")
-                    st.code(get_section('職務経歴', res), language="text")
-                    # --- Wordダウンロードボタンの追加 ---
                     job_history_text = get_section('職務経歴', res)
+                    st.code(job_history_text, language="text")
+                    
+                    # --- Wordダウンロードボタンの追加 ---
                     docx_file = create_docx(job_history_text)
                     st.download_button(
                         label="📥 職務経歴書をWordでダウンロード",
@@ -357,16 +320,17 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
     m_mode = st.radio("分析モード", ["1. 簡易マッチング", "2. 詳細マッチング（推薦文あり）"], horizontal=True)
     
     if m_mode == "1. 簡易マッチング":
-        col1, col2 = st.columns(2)
-        with col1:
+        # 修正：入力欄のガタガタを2カラムで綺麗に整列
+        c1, c2 = st.columns(2)
+        with c1: 
             m_age = st.number_input("年齢", 18, 85, 25, key="m_age_3")
-            m_ind = st.text_input("応募業種", key="m_ind_3")
+            m_ind = st.text_input("応募業種", placeholder="例：IT・SaaS", key="m_ind_3")
             m_ind_exp = st.radio("業種経験", ["あり", "なし"], horizontal=True, key="m_ind_exp_3")
-        with col2:
-            m_job = st.text_input("応募職種", key="m_job_3")
+        with c2: 
+            m_job = st.text_input("応募職種", placeholder="例：法人営業", key="m_job_3")
             m_job_exp = st.radio("職種経験", ["あり", "なし"], horizontal=True, key="m_job_exp_3")
         
-        if st.button("簡易マッチ分析を実行"):
+        if st.button("簡易マッチ分析を実行", type="primary", use_container_width=True):
             prompt = f"年齢{m_age}歳、応募業種：{m_ind}(経験{m_ind_exp})、応募職種：{m_job}(経験{m_job_exp})。この条件での採用マッチ度(0-100%)と、その理由を簡潔に出力してください。フォーマット：【マッチ度】【理由】"
             with st.spinner("計算中..."):
                 resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
@@ -381,9 +345,9 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
         with col2:
             st.subheader("📄 完成書類")
             s_info = st.text_area("求職者の追加補足", height=200)
-            s_files = st.file_uploader("作成済みの履歴書・職務経歴書・面談文字起こし", accept_multiple_files=True, key="s_up_3")
+            s_files = st.file_uploader("作成済みの書類", accept_multiple_files=True, key="s_up_3")
 
-        if st.button("詳細審査 & 推薦文作成", type="primary"):
+        if st.button("詳細審査 & 推薦文作成", type="primary", use_container_width=True):
             if not my_name:
                 st.error("アドバイザー名を入力してください。")
             else:
@@ -425,8 +389,13 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         match_score_raw = get_section('マッチ度', res_m)
                         ms = int(re.search(r'\d+', match_score_raw).group()) if re.search(r'\d+', match_score_raw) else 0
                         
-                        st.metric("最終マッチ度", f"{ms} %")
-                        st.markdown(f"#### ✍️ 書類修正のアドバイス\n<div class='fb-box'>{get_section('書類修正アドバイス', res_m)}</div>", unsafe_allow_html=True)
+                        st.markdown(f"""
+                        <div class="cyber-panel">
+                            <div class="scan-line"></div>
+                            <h3>最終マッチ度: {ms} %</h3>
+                            <div class='fb-box'>{get_section('書類修正アドバイス', res_m)}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
                         
                         if ms >= 80:
                             st.success("🔥 合格ライン突破！推薦状が利用可能です。")
@@ -439,6 +408,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
+
 
 
 
