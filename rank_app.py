@@ -280,7 +280,6 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
         elif not (achievement or seeker_data.strip()): st.warning("求職者情報を入力してください。")
         else:
             with st.spinner("情報を深く分析中..."):
-                # ★修正：質の向上と改行ルールを追記したメインプロンプト
                 prompt = f"""
 あなたは人材紹介会社の**プロキャリアライター兼採用目線の職務経歴書編集者**です。
 提供された「企業情報」と「求職者情報」を深く分析し、企業が「ぜひ会ってみたい」と思える具体的・誠実・読みやすい書類を作成してください。
@@ -380,21 +379,27 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
         # --- AIチャット機能 ---
         st.divider()
         st.subheader("💬 AIアシスタントと内容を調整する")
+        
+        # ★追加：ターゲット選択UI
+        edit_target = st.radio("🎯 修正する項目を選択", ["全体", "職務経歴", "自己PR", "志望動機"], horizontal=True)
+
         for msg in st.session_state.chat_messages:
             with st.chat_message(msg["role"]): st.markdown(msg["content"])
                 
-        if chat_input := st.chat_input("修正依頼を入力（例：志望動機の『』をなくして）"):
-            st.session_state.chat_messages.append({"role": "user", "content": chat_input})
-            with st.chat_message("user"): st.markdown(chat_input)
+        if chat_input := st.chat_input(f"【{edit_target}】への修正依頼を入力してください"):
+            st.session_state.chat_messages.append({"role": "user", "content": f"[{edit_target}] {chat_input}"})
+            with st.chat_message("user"): st.markdown(f"**[{edit_target}]** {chat_input}")
                 
             with st.chat_message("assistant"):
-                # ★修正：質の向上と改行ルールを追記したチャット用プロンプト
+                # ★修正：ターゲットを絞ったチャット用プロンプト
                 chat_prompt = f"""
 あなたはプロのキャリアコンサルタントです。ユーザーの【修正指示】に基づき、書類をより魅力的で具体的に改善してください。
 
+【対象セクション】: {edit_target}
+
 【厳守ルール】
-1. 指示されたセクション（職務経歴、自己PR、志望動機のいずれか）をピンポイントで修正。
-2. 他のセクションは一切変更しない。
+1. 指定された「{edit_target}」の部分のみを修正してください（「全体」の場合は全体のバランスを見て修正）。
+2. 修正対象外のセクションは一切変更せず、そのまま出力してください。
 3. 元の改行、見出し(■,▼,・)、箇条書き、体言止めのフォーマットを絶対に崩さない。
 4. 自己PRや志望動機を修正する場合は、必ず適度な「改行（段落分け）」を入れて読みやすくすること。
 5. プロの視点から、より具体的で説得力のある表現にブラッシュアップすること。
@@ -466,6 +471,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                 with st.spinner("審査中..."):
                     c_data = read_files(c_files) + "\n" + (get_url_text(c_url_3) if c_url_3 else "")
                     s_data = read_files(s_files)
+                    
                     prompt = f"""
 あなたは凄腕ヘッドハンター兼採用担当者です。
 企業要件と求職者の書類を照らし合わせ、マッチ度を％で算出し、推薦メールを作成してください。
@@ -481,7 +487,6 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
 【面接対策】
 (想定質問と回答の方向性)
 【推薦文】
-フォーマット↓
 (企業名) 採用ご担当者様
 
 お世話になっております。キャリアアドバイザーの株式会社ライフアップの{my_name}です。
@@ -507,8 +512,3 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                             st.success("🔥 合格ライン突破！"); st.code(get_section('推薦文', res_m), language="text")
                         st.subheader("🗣️ 面接対策"); st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
-
-
-
-
-
