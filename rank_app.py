@@ -24,7 +24,7 @@ st.markdown("""
 
 @keyframes move-bg {
     0% { background_position: 0 0; }
-    100% { background-position: 1000px 1000px; }
+    100% { background_position: 1000px 1000px; }
 }
 .stApp::before {
     content: "";
@@ -158,7 +158,6 @@ with st.sidebar:
     else:
         for i, log in enumerate(st.session_state.history_log):
             with st.expander(f"📁 {log['time']} ({log['job']})"):
-                # ★追加：履歴を復元するボタン
                 if st.button("🔄 この画面を復元する", key=f"restore_btn_{i}"):
                     st.session_state.phase2_score = log["score"]
                     st.session_state.phase2_advice = log["advice"]
@@ -281,24 +280,58 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
         elif not (achievement or seeker_data.strip()): st.warning("求職者情報を入力してください。")
         else:
             with st.spinner("情報を深く分析中..."):
+                # ★修正：絶対に省略しない完全なプロンプトを復元
                 prompt = f"""
-あなたはプロキャリアライター兼採用目線の職務経歴書編集者です。
-【企業情報】
-業種：{t_ind} / 職種：{t_job}
-資料：{corp_data}
-【求職者情報】
-メモ：{achievement}
-資料：{seeker_data}
+あなたは人材紹介会社の**プロキャリアライター兼採用目線の職務経歴書編集者**です。
+提供された「企業情報」と「求職者情報」を深く分析し、企業が「ぜひ会ってみたい」と思える具体的・誠実・読みやすい書類を作成してください。
+
+【入力：企業情報】
+志望業種：{t_ind if t_ind else "未入力（企業資料から判断してください）"}
+志望職種：{t_job if t_job else "未入力（企業資料から判断してください）"}
+企業側資料：{corp_data if corp_data else "なし"}
+
+【入力：求職者情報】
+補足メモ：{achievement if achievement else "なし"}
+求職者側資料（履歴書・面談文字起こし等）：{seeker_data if seeker_data else "なし"}
 
 ---
-以下のセクションを省略せず出力してください。
-【評価】(S/A/B/C/Z)
+【重要ルール】
+- 提供された「求職者情報」から、実際の経験・業務内容・成果を具体的に抽出し、必ず書類に反映させてください。架空の経験は絶対に書かないでください。
+- 「企業情報」の求める人物像に合わせ、求職者の強みを最適化して記載してください。
+- 以下の【】で囲まれた各セクションを、「一切省略せずに」出力してください。
+
+【評価】
+(S最高/A良き！/Bいい感じ/C要努力/Z測定不能のみ)
+
 【理由とアドバイス】
+(評価の理由と、エージェントへの書類作成等で見抜くべき視点のアドバイスを記載)
+
 【職務経歴】
-※文末は「〜を実施。」「〜に貢献。」等で言い切ること。
+1. 作成日・氏名
+2. 職務経歴（各社ごとに以下の構成を維持。必ず求職者資料の事実を元に書くこと）
+   ■会社名：〇〇
+   雇用形態：〇〇
+   事業内容：〇〇
+   役職：〇〇
+   ▼業務内容
+   ・実際の業務内容（タスク・役割）を5〜7行で具体的に記載。
+   ・【絶対ルール】文末は「〜ました」「〜です」を禁止し、必ず「〇〇を実施。」「〇〇を担当。」「〇〇に貢献。」と簡潔に言い切ること。
+   ▼成果
+   ・数値・改善・貢献を具体的に記載。
+   ・【絶対ルール】文末は「〜ました」を禁止し、「〇〇を実現し、〇〇％改善。」「〇〇件の契約を継続的に達成。」のように言い切ること。
+
 【自己PR】
-※文末は「〜です。〜ます。」の敬体。
+- 企業情報に最適化された自己PR。
+- 企業の理念・社風・仕事内容に合わせ、経験をどう活かせるか、なぜ惹かれたかを記載。
+- 400字で構成。事実を元にし、嘘や推測は含めない。
+- 「」や””や・などAI文章だとわかる記号は控える。文体は敬体（です・ます）。
+- 一文は60文字以内で簡潔に。丁寧・誠実・安定感のある文体で統一。
+
 【志望動機】
+- 企業情報と求職者情報を結びつけ、なぜこの企業なのかを具体的に記載。
+- 企業にマイナスにならないのを前提に、年齢に合わせた文章・言葉使いにする。
+- 約450字で作成。業務や実績は推測や嘘を避ける。
+- 「」や””や・などは控える。
 """
                 try:
                     resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
@@ -351,7 +384,6 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
             with st.chat_message("user"): st.markdown(chat_input)
                 
             with st.chat_message("assistant"):
-                # ★強化ポイント：修正箇所を特定し、フォーマットを崩さないチャット用プロンプト
                 chat_prompt = f"""
 あなたはプロのキャリアコンサルタントです。ユーザーの【修正指示】に基づき、書類を改善してください。
 
@@ -371,7 +403,6 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                     chat_resp = client.models.generate_content(model='gemini-2.5-flash', contents=chat_prompt)
                     st.markdown(chat_resp.text)
                     st.session_state.chat_messages.append({"role": "assistant", "content": chat_resp.text})
-                    # 履歴のチャットログも更新
                     if st.session_state.history_log:
                         st.session_state.history_log[0]["chat"] = st.session_state.chat_messages
                 except Exception as e: st.error(f"チャットエラー: {e}")
@@ -392,9 +423,24 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
             m_job = st.text_input("応募職種", key="m_job_3")
         
         if st.button("簡易マッチ分析を実行"):
-            prompt = f"年齢{m_age}歳、応募業種：{m_ind}、応募職種：{m_job}のマッチ度と理由を出力。"
-            resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
-            st.markdown(f"<div class='cyber-panel'>{resp.text}</div>", unsafe_allow_html=True)
+            if not m_ind or not m_job:
+                st.warning("業種と職種を入力してください。")
+            else:
+                prompt = f"""
+あなたは採用のプロです。以下の条件から採用マッチ度（％）と、その理由を客観的に出力してください。
+条件：年齢{m_age}歳、応募業種：{m_ind}、応募職種：{m_job}
+出力フォーマット：
+【マッチ度】
+(0-100の数字)
+【理由】
+(簡潔に)
+"""
+                try:
+                    resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+                    st.markdown(f"<div class='cyber-panel'>{resp.text}</div>", unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f"APIエラー: {e}")
+                    
     else:
         col1, col2 = st.columns(2)
         with col1:
@@ -413,12 +459,36 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                 with st.spinner("審査中..."):
                     c_data = read_files(c_files) + "\n" + (get_url_text(c_url_3) if c_url_3 else "")
                     s_data = read_files(s_files)
+                    
+                    # ★修正：絶対に省略しない完全なプロンプトを復元
                     prompt = f"""
-凄腕ヘッドハンターとして、企業要件{c_info}{c_data}と、求職者書類{s_info}{s_data}を審査し、以下を出力せよ。
-【マッチ度】(数字)
+あなたは凄腕ヘッドハンター兼採用担当者です。
+企業要件と求職者の書類を照らし合わせ、マッチ度を％で算出し、推薦メールを作成してください。
+
+企業情報：{c_info}\n{c_data}
+求職者書類：{s_info}\n{s_data}
+
+---
+【マッチ度】
+(0〜100の数字のみ)
 【書類修正アドバイス】
+(さらに通過率を上げるための具体的な修正点)
 【面接対策】
-【推薦文】(株式会社ライフアップ {my_name}名義)
+(想定質問と回答の方向性)
+【推薦文】
+(企業名) 採用ご担当者様
+
+お世話になっております。キャリアアドバイザーの株式会社ライフアップの{my_name}です。
+この度、○○様を推薦させていただきたく、ご連絡申し上げました。
+
+【推薦理由】
+・(応募企業に活かせる強み)
+・(貢献できる理由)
+・(懸念点払拭があれば)
+・人柄や熱意も含めて200-300字程度
+・AI記号「」などは禁止)
+ぜひ一度、面接にてご本人とお話しいただけますと幸いです。
+何卒ご検討のほど、よろしくお願い申し上げます。
 """
                     try:
                         resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
@@ -431,3 +501,4 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                             st.success("🔥 合格ライン突破！"); st.code(get_section('推薦文', res_m), language="text")
                         st.subheader("🗣️ 面接対策"); st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
