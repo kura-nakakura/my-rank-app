@@ -472,6 +472,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                     c_data = read_files(c_files) + "\n" + (get_url_text(c_url_3) if c_url_3 else "")
                     s_data = read_files(s_files)
                     
+                    # ★修正：AIがフォーマットを崩さないよう、見出しのルールを明確化
                     prompt = f"""
 あなたは凄腕ヘッドハンター兼採用担当者です。
 企業要件と求職者の書類を照らし合わせ、マッチ度を％で算出し、推薦メールを作成してください。
@@ -480,24 +481,30 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
 求職者書類：{s_info}\n{s_data}
 
 ---
+【絶対ルール】
+出力は必ず以下の4つの【】見出しを含め、指定の構成で出力してください。他の【】見出しは作らないでください。
+
 【マッチ度】
 (0〜100の数字のみ)
+
 【書類修正アドバイス】
 (さらに通過率を上げるための具体的な修正点)
+
 【面接対策】
 (想定質問と回答の方向性)
-【推薦文】
-(企業名) 採用ご担当者様
 
+【推薦文】
+(以下の構成で作成)
+(企業名) 採用ご担当者様
 お世話になっております。キャリアアドバイザーの株式会社ライフアップの{my_name}です。
 この度、○○様を推薦させていただきたく、ご連絡申し上げました。
 
-【推薦理由】
+■推薦理由
 ・(応募企業に活かせる強み)
 ・(貢献できる理由)
 ・(懸念点払拭があれば)
-・人柄や熱意も含めて200-300字程度
-・AI記号「」などは禁止)
+(人柄や熱意も含めて200-300字程度、AI記号「」などは禁止)
+
 ぜひ一度、面接にてご本人とお話しいただけますと幸いです。
 何卒ご検討のほど、よろしくお願い申し上げます。
 """
@@ -509,6 +516,11 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.metric("最終マッチ度", f"{ms} %")
                         st.markdown(f"#### ✍️ アドバイス\n<div class='fb-box'>{get_section('書類修正アドバイス', res_m)}</div>", unsafe_allow_html=True)
                         if ms >= 80:
-                            st.success("🔥 合格ライン突破！"); st.code(get_section('推薦文', res_m), language="text")
-                        st.subheader("🗣️ 面接対策"); st.write(get_section('面接対策', res_m))
+                            st.success("🔥 合格ライン突破！")
+                            st.code(get_section('推薦文', res_m), language="text")
+                        else:
+                            st.warning("⚠️ マッチ度が基準(80%)を下回っています。")
+                            st.code(get_section('推薦文', res_m), language="text") # 基準を下回っていても一旦推薦文は表示する
+                        st.subheader("🗣️ 面接対策")
+                        st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
