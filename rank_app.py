@@ -16,6 +16,16 @@ from google.oauth2.service_account import Credentials
 import datetime
 
 # ==========================================
+# ⚙️ システム設定・マスタ管理（★追加）
+# ==========================================
+# 今後エージェントが増えたらここに追加するだけでOKです
+AGENT_SHEETS = {
+    "中倉": "1mPf7VGMYEIN6hYiUWEsFEmDfLNGnx9c4fQM26dhhrM0",
+    # "山田": "山田用のスプレッドシートID",
+}
+AGENT_LIST = list(AGENT_SHEETS.keys())
+
+# ==========================================
 # 🎨 デザイン定義
 # ==========================================
 st.set_page_config(page_title="AIエージェントシステム PRO", page_icon="🤖", layout="wide")
@@ -106,7 +116,7 @@ if "p0_generated" not in st.session_state:
 if "p0_interview_date" not in st.session_state:
     st.session_state.p0_interview_date = ""
 
-# ★追加：エラー回避のための初期化（ここが抜けていたのが原因です）
+# ★追加：エラー回避のための初期化
 if "p0_change_count" not in st.session_state:
     st.session_state.p0_change_count = ""
 if "p0_short_term" not in st.session_state:
@@ -196,11 +206,11 @@ def export_to_spreadsheet(agent_name, seeker_name, interview_date, additional_da
         creds = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
         gc = gspread.authorize(creds)
         
-        # エージェントごとのシートID振り分け
-        if agent_name == "中倉":
-            sheet_id = "1mPf7VGMYEIN6hYiUWEsFEmDfLNGnx9c4fQM26dhhrM0"
+        # ★変更：エージェントごとのシートID振り分け（辞書を使用）
+        if agent_name in AGENT_SHEETS:
+            sheet_id = AGENT_SHEETS[agent_name]
         else:
-            return False, "登録されていないエージェント名です。"
+            return False, f"登録されていないエージェント名です: {agent_name}"
 
         sh = gc.open_by_key(sheet_id)
         
@@ -272,6 +282,7 @@ def export_to_spreadsheet(agent_name, seeker_name, interview_date, additional_da
         return False, f"エラー: {e}"
 
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+
 # ==========================================
 # 🎛️ サイドバー
 # ==========================================
@@ -400,6 +411,7 @@ if app_mode == "0. 初回面談 (カルテ作成)":
             st.warning("文字起こしファイルを添付するか、メモを入力してください。")
         else:
             with st.spinner("AIが面談内容を詳細に分析中..."):
+                # ★変更：プロンプトを大幅強化（エージェント名選択式、職歴8項目指定）
                 prompt = f"""
                 あなたは優秀なキャリアアドバイザーのアシスタントです。
                 以下の「面談の文字起こし・メモ」から、求職者の情報を抽出して整理してください。
@@ -414,6 +426,7 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 【面談日】
                 (YYYY/MM/DD形式)
                 【エージェント名】
+                (必ず以下のリストから完全一致で選択してください。該当なしは「その他」：{AGENT_LIST})
                 【求職者名】
                 【エージェント面談の認識】
                 【エージェントの利用経験】
@@ -431,7 +444,16 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 # --------------------------
 
                 【職務経歴】
-                (社数分ループ)
+                (経験社数分、以下の8項目を必ず箇条書きで詳細に抽出すること)
+                ■会社名：
+                ・雇用形態：(正社員、アルバイト、業務委託、契約社員など)
+                ・部署／役職：(あれば記載、なければなし)
+                ・職種：
+                ・主な業務内容：
+                ・入社理由：
+                ・実績や成果：
+                ・退職理由：
+
                 【転職を考えたきっかけ】
                 【今回の転職で叶えたいこと】
                 【入社後どうなっていたいか】
@@ -545,9 +567,11 @@ if app_mode == "0. 初回面談 (カルテ作成)":
         with st.container(border=True):
             st.markdown('<div class="emerald-box"></div>', unsafe_allow_html=True)
             
-            # ★変更：エージェント名の横に「面談日」を表示・修正できるように追加
+            # ★変更：エージェント名をリストから選べるようにセレクトボックス化
             c_ag1, c_ag2 = st.columns(2)
-            with c_ag1: e_agent = st.text_input("エージェント名", value=st.session_state.p0_agent)
+            with c_ag1:
+                agent_idx = AGENT_LIST.index(st.session_state.p0_agent) if st.session_state.p0_agent in AGENT_LIST else 0
+                e_agent = st.selectbox("エージェント名", AGENT_LIST + ["その他"], index=agent_idx)
             with c_ag2: e_interview_date = st.text_input("面談日 (不明・空欄時は今日の日付で転記)", value=st.session_state.p0_interview_date)
             
             st.markdown("#### 👤 基本情報")
@@ -628,10 +652,10 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                         st.success(message)
                     else:
                         st.error(message)
+
 # ==========================================
 # Phase 1: 応募時 (ランク判定)
 # ==========================================
-# ★変更：if から elif に変更
 elif app_mode == "1. 応募時 (ランク判定)":
     st.title("Phase 1: 応募時簡易分析")
     col1, col2, col3 = st.columns(3)
@@ -695,8 +719,16 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
         
     with col2:
         st.subheader("📂 求職者情報")
+        
+        # ★追加：Phase 0のカルテ情報を読み込むボタン
+        if st.button("🔄 Phase 0のカルテ情報を読み込む"):
+            st.session_state.p2_sync_achievement = f"【職務経歴】\n{st.session_state.p0_history}\n\n【転職理由】\n{st.session_state.p0_reason1}\n\n【叶えたいこと】\n{st.session_state.p0_reason2}\n\n【強み】\n{st.session_state.p0_str}\n{st.session_state.p0_str_ep}"
+            st.success("Phase 0のカルテデータを読み込みました！")
+
         u_files_seeker = st.file_uploader("履歴書・面談文字起こし", accept_multiple_files=True, key="seeker_up")
-        achievement = st.text_area("求職者の補足事項・メモ", height=100)
+        
+        # ★変更：同期したデータを初期値としてセット
+        achievement = st.text_area("求職者の補足事項・メモ", value=st.session_state.get("p2_sync_achievement", ""), height=100)
         
         components.html("""
         <div style="font-family: sans-serif; margin-top: -10px;">
@@ -810,7 +842,6 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
                         "motive": st.session_state.phase2_motive,
                         "chat": []
                     })
-                    # ★修正：履歴の保存上限を5件から20件に変更
                     if len(st.session_state.history_log) > 20: st.session_state.history_log.pop()
                 except Exception as e: st.error(f"解析エラー: {e}")
 
@@ -976,6 +1007,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
