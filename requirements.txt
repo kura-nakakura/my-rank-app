@@ -5,4 +5,5 @@ beautifulsoup4
 pypdf
 python-docx
 gspread
+google-auth
 
