@@ -228,8 +228,16 @@ def export_to_spreadsheet(agent_name, seeker_name, interview_date, additional_da
             if additional_data:
                 # B4: 応募企業名
                 new_ws.update_acell('B4', additional_data.get("company_name", ""))
-                # D2: 年齢
-                new_ws.update_acell('D2', additional_data.get("age", ""))
+                # D2: 年齢（数字以外を徹底排除）
+                raw_age = additional_data.get("age", "")
+                # 正規表現で「最初に見つかった連続する数字」だけを抜き出す
+                age_match = re.search(r'\d+', raw_age)
+                if age_match:
+                    age_digits = age_match.group()
+                else:
+                    age_digits = "" # 数字がない場合は空
+                
+                new_ws.update_acell('D2', age_digits)
                 # E2: 転職回数
                 new_ws.update_acell('E2', additional_data.get("change_count", ""))
                 # F2: 短期離職数
@@ -968,6 +976,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
