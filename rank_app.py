@@ -179,58 +179,82 @@ def create_carte_docx(carte_dict):
     doc.save(bio)
     return bio.getvalue()
 
-# ★変更：面談日(interview_date)を受け取るように関数をアップデート
-def export_to_spreadsheet(agent_name, seeker_name, interview_date):
+# ==========================================
+# 📊 スプレッドシート転記・詳細入力メイン関数
+# ==========================================
+def export_to_spreadsheet(agent_name, seeker_name, interview_date, additional_data=None):
     try:
         credentials_dict = dict(st.secrets["gcp_service_account"])
         scopes = ['https://www.googleapis.com/auth/spreadsheets']
         creds = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
         gc = gspread.authorize(creds)
         
+        # エージェントごとのシートID振り分け
         if agent_name == "中倉":
             sheet_id = "1mPf7VGMYEIN6hYiUWEsFEmDfLNGnx9c4fQM26dhhrM0"
         else:
-            return False, "登録されていないエージェント名です。スプレッドシートの紐付けがありません。"
+            return False, "登録されていないエージェント名です。"
 
         sh = gc.open_by_key(sheet_id)
         
+        # 1. 原本シートをコピーして個別シート作成
         try:
             original_ws = sh.worksheet("原本")
-            existing_sheets = [ws.title for ws in sh.worksheets()]
             new_sheet_name = f"{seeker_name}様"
+            
+            # 同名シートがある場合の重複回避
+            existing_sheets = [ws.title for ws in sh.worksheets()]
             if new_sheet_name in existing_sheets:
                 new_sheet_name = f"{seeker_name}様_{datetime.datetime.now().strftime('%m%d%H%M')}"
             
             new_ws = original_ws.duplicate(insert_sheet_index=1, new_sheet_name=new_sheet_name)
-            new_ws_id = new_ws.id
-            new_ws_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit#gid={new_ws_id}"
+            new_ws_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit#gid={new_ws.id}"
             
         except Exception as e:
-            return False, f"原本シートのコピーに失敗しました: {e}"
+            return False, f"原本コピー失敗: {e}"
 
+        # 2. 【重要】個別シートの指定セルに情報を入力
+        try:
+            # A1:B2 結合セルへの名前入力（左上のA1に書き込めばOK）
+            new_ws.update_acell('A1', f"{seeker_name} 様")
+            
+            if additional_data:
+                # B4: 応募企業名
+                new_ws.update_acell('B4', additional_data.get("company_name", ""))
+                # D2: 年齢
+                new_ws.update_acell('D2', additional_data.get("age", ""))
+                # E2: 転職回数
+                new_ws.update_acell('E2', additional_data.get("change_count", ""))
+                # F2: 短期離職数
+                new_ws.update_acell('F2', additional_data.get("short_term_leave", ""))
+                
+                # G2: マネジメント経験 (チェックボックス)
+                # 「あり」という文字が含まれていればTrue(チェック)を入れる
+                m_exp = additional_data.get("management", "")
+                is_m_checked = True if "あり" in m_exp or "経験あり" in m_exp else False
+                new_ws.update_acell('G2', is_m_checked)
+
+        except Exception as e:
+            st.warning(f"個別シートへの詳細書き込みに一部失敗しました: {e}")
+
+        # 3. 求職者管理表（インデックス）への追記
         try:
             list_ws = sh.worksheet("求職者管理表")
-            col_e_values = list_ws.col_values(5)
-            next_row = len(col_e_values) + 1
+            next_row = len(list_ws.col_values(5)) + 1
             
-            # ★変更：面談日が空、または「不明」などの場合は今日の日付を強制的に使う
-            if not interview_date or interview_date in ["不明", "記載なし", "なし"]:
-                final_date = datetime.datetime.now().strftime("%Y/%m/%d")
-            else:
-                final_date = interview_date
-
+            final_date = interview_date if interview_date not in ["不明", "記載なし", "なし", ""] else datetime.datetime.now().strftime("%Y/%m/%d")
             hyperlink_formula = f'=HYPERLINK("{new_ws_url}", "{seeker_name}")'
             
-            list_ws.update_cell(next_row, 5, hyperlink_formula)
-            list_ws.update_cell(next_row, 6, final_date)
+            list_ws.update_cell(next_row, 5, hyperlink_formula) # E列: 名前(リンク)
+            list_ws.update_cell(next_row, 6, final_date)         # F列: 面談日
             
         except Exception as e:
-            return False, f"求職者管理表への追記に失敗しました: {e}"
+            return False, f"管理表への追記失敗: {e}"
 
-        return True, "スプレッドシートの更新が完了しました！"
+        return True, f"「{new_sheet_name}」を作成し、データを入力しました！"
         
     except Exception as e:
-        return False, f"スプレッドシートへの接続エラー: {e}"
+        return False, f"エラー: {e}"
 
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 # ==========================================
@@ -927,6 +951,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
