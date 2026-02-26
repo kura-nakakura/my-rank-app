@@ -5,6 +5,9 @@ import re
 from pypdf import PdfReader
 import time
 from docx import Document
+# ★追加：Wordのフォント（明朝体）を強制設定するためのライブラリ
+from docx.shared import Pt
+from docx.oxml.ns import qn
 from io import BytesIO
 import requests
 from bs4 import BeautifulSoup
@@ -63,7 +66,7 @@ st.markdown("""
     padding: 15px; margin-top: 10px;
 }
 
-/* ★追加修正：マーカー(.emerald-box)を持つコンテナを確実にオーロラエメラルドにする強力なハック */
+/* マーカー(.emerald-box)を持つコンテナを確実にオーロラエメラルドにするハック */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.emerald-box) {
     background: linear-gradient(135deg, rgba(0, 229, 255, 0.05) 0%, rgba(0, 255, 153, 0.15) 50%, rgba(0, 229, 255, 0.05) 100%) !important;
     border: 1px solid rgba(0, 255, 153, 0.5) !important;
@@ -84,7 +87,7 @@ label p, .stTextInput label, .stNumberInput label, .stTextArea label, .stRadio l
 }
 [data-testid="stMetricValue"] { color: #00E5FF !important; }
 </style>
-""", unsafe_allow_html=True)
+"""
 
 # ==========================================
 # 💾 セッション記憶
@@ -92,7 +95,7 @@ label p, .stTextInput label, .stNumberInput label, .stTextArea label, .stRadio l
 if "history_log" not in st.session_state:
     st.session_state.history_log = [] 
 if "carte_log" not in st.session_state:
-    st.session_state.carte_log = [] # ★追加：カルテ専用の履歴保存(最大20件)
+    st.session_state.carte_log = [] 
 if "phase2_generated" not in st.session_state:
     st.session_state.phase2_generated = False 
 if "chat_messages" not in st.session_state:
@@ -145,8 +148,15 @@ def get_section(name, text):
     match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
     return match.group(1).strip() if match else f"{name}の情報が生成されませんでした。プロンプトを再確認してください。"
 
+# ★変更：Wordの日本語フォントを「ＭＳ 明朝」に強制設定
 def create_docx(history_text):
     doc = Document()
+    
+    # 全体のデフォルトフォントを明朝体に設定
+    style = doc.styles['Normal']
+    style.font.name = 'ＭＳ 明朝'
+    style.font._element.rPr.rFonts.set(qn('w:eastAsia'), 'ＭＳ 明朝')
+    
     doc.add_heading('職務経歴書（自己PR含む）', 0)
     for line in history_text.split('\n'):
         doc.add_paragraph(line)
@@ -154,8 +164,15 @@ def create_docx(history_text):
     doc.save(bio)
     return bio.getvalue()
 
+# ★変更：Wordの日本語フォントを「ＭＳ 明朝」に強制設定
 def create_carte_docx(carte_dict):
     doc = Document()
+    
+    # 全体のデフォルトフォントを明朝体に設定
+    style = doc.styles['Normal']
+    style.font.name = 'ＭＳ 明朝'
+    style.font._element.rPr.rFonts.set(qn('w:eastAsia'), 'ＭＳ 明朝')
+    
     doc.add_heading('初回面談カルテ', 0)
     for key, value in carte_dict.items():
         doc.add_heading(f'■ {key}', level=2)
@@ -839,6 +856,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
