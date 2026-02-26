@@ -217,12 +217,12 @@ def export_to_spreadsheet(agent_name, seeker_name, interview_date, additional_da
         # 1. 原本シートをコピーして個別シート作成
         try:
             original_ws = sh.worksheet("原本")
-            new_sheet_name = f"{seeker_name}様"
+            new_sheet_name = f"{seeker_name}"
             
             # 同名シートがある場合の重複回避
             existing_sheets = [ws.title for ws in sh.worksheets()]
             if new_sheet_name in existing_sheets:
-                new_sheet_name = f"{seeker_name}様_{datetime.datetime.now().strftime('%m%d%H%M')}"
+                new_sheet_name = f"{seeker_name}_{datetime.datetime.now().strftime('%m%d%H%M')}"
             
             new_ws = original_ws.duplicate(insert_sheet_index=1, new_sheet_name=new_sheet_name)
             new_ws_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit#gid={new_ws.id}"
@@ -233,7 +233,7 @@ def export_to_spreadsheet(agent_name, seeker_name, interview_date, additional_da
         # 2. 【重要】個別シートの指定セルに情報を入力
         try:
             # A1:B2 結合セルへの名前入力（左上のA1に書き込めばOK）
-            new_ws.update_acell('A1', f"{seeker_name} 様")
+            new_ws.update_acell('A1', f"{seeker_name} ")
             
             if additional_data:
                 # B4: 応募企業名
@@ -1007,6 +1007,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
