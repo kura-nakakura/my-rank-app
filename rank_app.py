@@ -405,6 +405,12 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 【生年月日・年齢】
                 【保有資格】
                 【現在の勤務状況】
+                【転職回数】
+                (例：3回。在職中も含めた合計社数-1)
+                【短期離職数】
+                (例：1回。1年以内の離職がある場合にカウント)
+                【応募企業名】
+                (面談の中で具体的な企業名が出ていれば記載、なければ「（未入力）」)
 
                 【職務経歴】
                 ※【重要】経験社数が複数ある場合は、以下のフォーマットを「■1社目」「■2社目」と社数分繰り返してすべて出力してください。
@@ -451,6 +457,10 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                     st.session_state.p0_age = get_section("生年月日・年齢", res)
                     st.session_state.p0_cert = get_section("保有資格", res)
                     st.session_state.p0_status = get_section("現在の勤務状況", res)
+                    st.session_state.p0_age = get_section("生年月日・年齢", res)
+                    st.session_state.p0_change_count = get_section("転職回数", res) # 追加
+                    st.session_state.p0_short_term = get_section("短期離職数", res) # 追加
+                    st.session_state.p0_company = get_section("応募企業名", res)   # 追加
                     
                     st.session_state.p0_history = get_section("職務経歴", res)
                     
@@ -552,11 +562,14 @@ if app_mode == "0. 初回面談 (カルテ作成)":
             c9, c10, c11 = st.columns(3)
             with c9:
                 e_c_job = st.text_input("希望職種・業務", value=st.session_state.p0_c_job)
+                e_company = st.text_input("応募企業名", value=st.session_state.p0_company) # 追加
                 e_c_loc = st.text_input("希望勤務地", value=st.session_state.p0_c_loc)
                 e_c_date = st.text_input("入社希望日", value=st.session_state.p0_c_date)
             with c10:
                 e_c_cur_sal = st.text_input("現在年収・給与", value=st.session_state.p0_c_cur_sal)
                 e_c_req_sal = st.text_input("希望年収・給与", value=st.session_state.p0_c_req_sal)
+                e_change_count = st.text_input("転職回数", value=st.session_state.p0_change_count) # 追加
+                e_short_term = st.text_input("短期離職数", value=st.session_state.p0_short_term)   # 追加
             with c11:
                 e_c_time = st.text_input("勤務時間・休日", value=st.session_state.p0_c_time)
                 e_c_vibes = st.text_input("社風・雰囲気", value=st.session_state.p0_c_vibes)
@@ -596,19 +609,17 @@ if app_mode == "0. 初回面談 (カルテ作成)":
 
         with c_btn_s:
             if st.button("📊 スプレッドシートに自動転記", type="primary", use_container_width=True):
-                with st.spinner("スプレッドシートを作成し、詳細データを入力中..."):
-                    
-                    # 1. AIが抽出したデータから、新しいシートに流し込む「追加情報」をセット
-                    additional_info = {
-                        "company_name": "（未入力）",  # Phase1で企業名が決まればここに入ります
-                        "age": e_age,               # AIが拾った年齢
-                        "change_count": "確認中",    # ここはAIに数えさせるか手入力
-                        "short_term_leave": "確認中",# ここはAIに判定させるか手入力
-                        "management": e_history     # 職歴の中に「マネジメント」の文字があるか判定用
+                with st.spinner("スプレッドシートを作成中..."):
+                    # 画面上で修正した最新の値をセットして送信
+                    info = {
+                        "company_name": e_company,      # 修正済み
+                        "age": e_age,
+                        "change_count": e_change_count, # 修正済み
+                        "short_term_leave": e_short_term, # 修正済み
+                        "management": e_history
                     }
 
-                    # 2. パワーアップした関数を呼び出す
-                    success, message = export_to_spreadsheet(e_agent, e_seeker, e_interview_date, additional_info)
+                    success, message = export_to_spreadsheet(e_agent, e_seeker, e_interview_date, info)
                     
                     if success:
                         st.success(message)
@@ -962,6 +973,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
