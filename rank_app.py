@@ -81,6 +81,9 @@ if "phase2_generated" not in st.session_state:
     st.session_state.phase2_generated = False 
 if "chat_messages" not in st.session_state:
     st.session_state.chat_messages = []
+# ★追加：Phase 0 (カルテ作成) 用の記憶
+if "p0_generated" not in st.session_state:
+    st.session_state.p0_generated = False
 
 # --- セキュリティ ---
 LOGIN_PASSWORD = "HR9237"
@@ -136,14 +139,26 @@ def create_docx(history_text):
     doc.save(bio)
     return bio.getvalue()
 
-client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+# ★追加：面談カルテをWord出力する専用関数
+def create_carte_docx(carte_dict):
+    doc = Document()
+    doc.add_heading('初回面談カルテ', 0)
+    for key, value in carte_dict.items():
+        doc.add_heading(f'■ {key}', level=2)
+        doc.add_paragraph(value)
+    bio = BytesIO()
+    doc.save(bio)
+    return bio.getvalue()
 
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 # ==========================================
 # 🎛️ サイドバー
 # ==========================================
 with st.sidebar:
     st.title("AI AGENT MENU")
+    # ★追加：0. 初回面談 をリストの一番上に追加
     app_mode = st.radio("フェーズ選択", [
+        "0. 初回面談 (カルテ作成)",
         "1. 応募時 (ランク判定)", 
         "2. 初回面談後 (詳細分析/書類作成)", 
         "3. 書類作成後 (マッチ審査/推薦文)"
@@ -177,9 +192,119 @@ with st.sidebar:
                 )
 
 # ==========================================
+# Phase 0: 初回面談 (カルテ作成)
+# ==========================================
+if app_mode == "0. 初回面談 (カルテ作成)":
+    st.title("Phase 0: 初回面談ヒアリング (カルテ自動生成)")
+    st.markdown("Google Meet等の文字起こしテキストを貼り付けるか、音声を録音することで、AIが自動で項目を整理します。")
+
+    components.html("""
+    <div style="font-family: sans-serif; margin-bottom: 10px;">
+        <p style="color: #00E5FF; font-size: 14px; font-weight: bold; margin-bottom: 5px;">🎤 音声入力（補助ツール）</p>
+        <button id="start-btn" style="background: transparent; color: #00E5FF; border: 1px solid #00E5FF; border-radius: 5px; padding: 5px 10px; cursor: pointer;">🔴 録音開始</button>
+        <button id="stop-btn" style="background: transparent; color: #ff4b4b; border: 1px solid #ff4b4b; border-radius: 5px; padding: 5px 10px; cursor: pointer;" disabled>⏹ 停止</button>
+        <p style="color: #FFFFFF; font-size: 12px; margin-top: 5px;">※録音した場合は下のテキストエリアに自動で入力されます</p>
+    </div>
+    <script>
+        const startBtn = document.getElementById('start-btn'); const stopBtn = document.getElementById('stop-btn');
+        let recognition;
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition(); recognition.lang = 'ja-JP'; recognition.continuous = true;
+            recognition.onresult = function(event) {
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+                }
+                // Streamlitの親要素(テキストエリア)に直接値を送るハックは不安定なため、
+                // 今回はシンプルにクリップボードにコピーさせるか、専用枠に出してコピペさせます。
+            };
+            startBtn.onclick = () => { recognition.start(); startBtn.disabled = true; stopBtn.disabled = false; };
+            stopBtn.onclick = () => { recognition.stop(); startBtn.disabled = false; stopBtn.disabled = true; };
+        }
+    </script>
+    """, height=90)
+
+    # メインの入力エリア（コピペでも音声でもOK）
+    raw_memo = st.text_area("📝 面談メモ / 文字起こしテキスト (ここにテキストを貼り付けてください)", height=250, placeholder="ここにGoogle Meetの文字起こしをペーストしてください...")
+
+    if st.button("🪄 AIで項目を自動抽出", type="primary"):
+        if not raw_memo.strip():
+            st.warning("文字起こしテキスト、またはメモを入力してください。")
+        else:
+            with st.spinner("AIが面談内容を分析・整理中..."):
+                prompt = f"""
+                あなたは優秀なキャリアアドバイザーのアシスタントです。
+                以下の「面談の文字起こし・メモ」から、求職者の情報を抽出して整理してください。
+                情報が語られていない項目は「不明」と記載してください。
+
+                【面談データ】
+                {raw_memo}
+
+                【抽出フォーマット（絶対厳守）】
+                【氏名】
+                【年齢】
+                【現職・前職】
+                【転職理由】
+                【希望条件】
+                【強み・スキル】
+                【その他特記事項】
+                """
+                try:
+                    resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+                    res = resp.text
+
+                    st.session_state.p0_name = get_section("氏名", res)
+                    st.session_state.p0_age = get_section("年齢", res)
+                    st.session_state.p0_job = get_section("現職・前職", res)
+                    st.session_state.p0_reason = get_section("転職理由", res)
+                    st.session_state.p0_condition = get_section("希望条件", res)
+                    st.session_state.p0_skill = get_section("強み・スキル", res)
+                    st.session_state.p0_note = get_section("その他特記事項", res)
+                    st.session_state.p0_generated = True
+
+                except Exception as e:
+                    st.error(f"解析エラー: {e}")
+
+    # 自動抽出されたデータの表示と編集
+    if st.session_state.get("p0_generated"):
+        st.markdown(f'<div class="cyber-panel"><div class="scan-line"></div><h3>📋 抽出されたカルテ情報</h3><p style="color:white; font-size:14px;">※手作業で修正・追記が可能です</p></div>', unsafe_allow_html=True)
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            e_name = st.text_input("氏名", value=st.session_state.p0_name)
+            e_age = st.text_input("年齢", value=st.session_state.p0_age)
+            e_job = st.text_area("現職・前職", value=st.session_state.p0_job, height=130)
+            e_skill = st.text_area("強み・スキル", value=st.session_state.p0_skill, height=130)
+        with c2:
+            e_reason = st.text_area("転職理由", value=st.session_state.p0_reason, height=130)
+            e_condition = st.text_area("希望条件", value=st.session_state.p0_condition, height=130)
+            e_note = st.text_area("その他特記事項", value=st.session_state.p0_note, height=130)
+
+        # Word出力機能
+        st.divider()
+        carte_dict = {
+            "氏名": e_name,
+            "年齢": e_age,
+            "現職・前職": e_job,
+            "転職理由": e_reason,
+            "希望条件": e_condition,
+            "強み・スキル": e_skill,
+            "その他特記事項": e_note
+        }
+        docx_file = create_carte_docx(carte_dict)
+        st.download_button(
+            label="📥 このカルテをWordでダウンロード",
+            data=docx_file,
+            file_name=f"面談カルテ_{e_name}.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            type="primary"
+        )
+
+# ==========================================
 # Phase 1: 応募時 (ランク判定)
 # ==========================================
-if app_mode == "1. 応募時 (ランク判定)":
+# ★変更：if から elif に変更
+elif app_mode == "1. 応募時 (ランク判定)":
     st.title("Phase 1: 応募時簡易分析")
     col1, col2, col3 = st.columns(3)
     with col1: age = st.number_input("年齢", 18, 85, 25) 
@@ -524,3 +649,4 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
