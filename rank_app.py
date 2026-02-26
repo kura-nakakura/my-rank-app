@@ -222,21 +222,17 @@ if app_mode == "0. 初回面談 (カルテ作成)":
     </script>
     """, height=90)
 
-    # ★追加：ファイルアップロード機能
     u_files_memo = st.file_uploader("📂 文字起こしファイルなど (PDF/TXT)", accept_multiple_files=True, key="p0_up")
-
-    # メインの入力エリア
     raw_memo = st.text_area("📝 面談メモ / 文字起こしテキスト (手入力・コピペ用)", height=200, placeholder="ここにテキストをペースト、または手書きメモを入力してください...")
 
     if st.button("🪄 AIで項目を自動抽出", type="primary"):
-        # ★追加：添付ファイルとテキストエリアの文字を合体させる
         file_text = read_files(u_files_memo) if u_files_memo else ""
         combined_memo = file_text + "\n" + raw_memo
 
         if not combined_memo.strip():
             st.warning("文字起こしファイルを添付するか、メモを入力してください。")
         else:
-            with st.spinner("AIが面談内容を分析・整理中..."):
+            with st.spinner("AIが面談内容を詳細な項目ごとに分析・整理中..."):
                 prompt = f"""
                 あなたは優秀なキャリアアドバイザーのアシスタントです。
                 以下の「面談の文字起こし・メモ」から、求職者の情報を抽出して整理してください。
@@ -246,25 +242,20 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 {combined_memo}
 
                 【抽出フォーマット（絶対厳守）】
-                以下の【】で囲まれたセクション名を必ず使用し、各項目を抽出してください。
+                以下の【】で囲まれたセクション名を必ず使用し、各項目を個別に抽出してください。見出しは変更しないでください。
 
                 【エージェント名】
-                (面談を担当しているエージェントの名前)
-
                 【求職者名】
-                (求職者の名前)
-
-                【基本情報】
-                ・エージェント面談の認識（有/無）：
-                ・エージェントの利用経験（有/無）：
-                ・生年月日／年齢：
-                ・保有資格：
-                ・現在の勤務状況（在職中/離職中）：
+                【エージェント面談の認識】
+                【エージェントの利用経験】
+                【生年月日・年齢】
+                【保有資格】
+                【現在の勤務状況】
 
                 【職務経歴】
                 ※【重要】経験社数が複数ある場合は、以下のフォーマットを「■1社目」「■2社目」と社数分繰り返してすべて出力してください。
                 ■〇社目：[会社名]
-                ・雇用形態（正社員/アルバイト/業務委託/契約社員など）：
+                ・雇用形態：
                 ・部署／役職：
                 ・職種：
                 ・主な業務内容：
@@ -272,43 +263,63 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 ・実績や成果：
                 ・退職理由：
 
-                【転職理由・キャリア観】
-                ・転職を考えたきっかけ：
-                ・今回の転職で叶えたいこと：
-                ・入社後どうなっていたいか（今後のビジョン）：
+                【転職を考えたきっかけ】
+                【今回の転職で叶えたいこと】
+                【入社後どうなっていたいか】
 
-                【強み・弱み】
-                ・自分の強み：
-                ・強みエピソード：
-                ・弱み：
-                ・自分の弱みエピソード：
+                【自分の強み】
+                【強みエピソード】
+                【弱み】
+                【自分の弱みエピソード】
 
-                【希望条件】
-                ・希望職種・業務：
-                ・希望勤務地（沿線・通勤時間）：
-                ・現在年収・給与：
-                ・希望年収・給与：
-                ・勤務時間・休日：
-                ・社風・雰囲気：
-                ・入社希望日：
+                【希望職種・業務】
+                【希望勤務地】
+                【現在年収・給与】
+                【希望年収・給与】
+                【勤務時間・休日】
+                【社風・雰囲気】
+                【入社希望日】
 
-                【その他確認・次回設定】
-                ・求職者からの確認事項や不安ごと：
-                ・次回面談日：
-                ・次回面談時間：
+                【求職者からの確認事項や不安ごと】
+                【次回面談日】
+                【次回面談時間】
                 """
                 try:
                     resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
                     res = resp.text
 
+                    # 細分化して抽出
                     st.session_state.p0_agent = get_section("エージェント名", res)
                     st.session_state.p0_seeker = get_section("求職者名", res)
-                    st.session_state.p0_basic = get_section("基本情報", res)
+                    st.session_state.p0_recog = get_section("エージェント面談の認識", res)
+                    st.session_state.p0_exp = get_section("エージェントの利用経験", res)
+                    st.session_state.p0_age = get_section("生年月日・年齢", res)
+                    st.session_state.p0_cert = get_section("保有資格", res)
+                    st.session_state.p0_status = get_section("現在の勤務状況", res)
+                    
                     st.session_state.p0_history = get_section("職務経歴", res)
-                    st.session_state.p0_career = get_section("転職理由・キャリア観", res)
-                    st.session_state.p0_sw = get_section("強み・弱み", res)
-                    st.session_state.p0_cond = get_section("希望条件", res)
-                    st.session_state.p0_other = get_section("その他確認・次回設定", res)
+                    
+                    st.session_state.p0_reason1 = get_section("転職を考えたきっかけ", res)
+                    st.session_state.p0_reason2 = get_section("今回の転職で叶えたいこと", res)
+                    st.session_state.p0_reason3 = get_section("入社後どうなっていたいか", res)
+                    
+                    st.session_state.p0_str = get_section("自分の強み", res)
+                    st.session_state.p0_str_ep = get_section("強みエピソード", res)
+                    st.session_state.p0_weak = get_section("弱み", res)
+                    st.session_state.p0_weak_ep = get_section("自分の弱みエピソード", res)
+                    
+                    st.session_state.p0_c_job = get_section("希望職種・業務", res)
+                    st.session_state.p0_c_loc = get_section("希望勤務地", res)
+                    st.session_state.p0_c_cur_sal = get_section("現在年収・給与", res)
+                    st.session_state.p0_c_req_sal = get_section("希望年収・給与", res)
+                    st.session_state.p0_c_time = get_section("勤務時間・休日", res)
+                    st.session_state.p0_c_vibes = get_section("社風・雰囲気", res)
+                    st.session_state.p0_c_date = get_section("入社希望日", res)
+                    
+                    st.session_state.p0_o_ans = get_section("求職者からの確認事項や不安ごと", res)
+                    st.session_state.p0_o_ndate = get_section("次回面談日", res)
+                    st.session_state.p0_o_ntime = get_section("次回面談時間", res)
+                    
                     st.session_state.p0_generated = True
 
                 except Exception as e:
@@ -318,33 +329,69 @@ if app_mode == "0. 初回面談 (カルテ作成)":
     if st.session_state.get("p0_generated"):
         st.markdown(f'<div class="cyber-panel"><div class="scan-line"></div><h3>📋 抽出されたカルテ情報</h3><p style="color:white; font-size:14px;">※手作業で修正・追記が可能です</p></div>', unsafe_allow_html=True)
         
-        # エージェント名・求職者名（単一行入力）
-        c_name1, c_name2 = st.columns(2)
-        with c_name1: e_agent = st.text_input("エージェント名", value=st.session_state.p0_agent)
-        with c_name2: e_seeker = st.text_input("求職者名", value=st.session_state.p0_seeker)
-        
-        # 各種詳細情報（複数行テキストエリア）
-        c1, c2 = st.columns(2)
+        st.markdown("#### 👤 基本情報")
+        c1, c2, c3 = st.columns(3)
         with c1:
-            e_basic = st.text_area("基本情報 (面談認識/年齢/資格/状況など)", value=st.session_state.p0_basic, height=150)
-            e_career = st.text_area("転職理由・キャリア観", value=st.session_state.p0_career, height=150)
-            e_cond = st.text_area("就職活動希望条件", value=st.session_state.p0_cond, height=200)
+            e_agent = st.text_input("エージェント名", value=st.session_state.p0_agent)
+            e_seeker = st.text_input("求職者名", value=st.session_state.p0_seeker)
+            e_status = st.text_input("現在の勤務状況", value=st.session_state.p0_status)
         with c2:
-            e_history = st.text_area("職務経歴 (複数社対応)", value=st.session_state.p0_history, height=250)
-            e_sw = st.text_area("強み・弱み (エピソード含む)", value=st.session_state.p0_sw, height=150)
-            e_other = st.text_area("その他確認事項・次回面談設定", value=st.session_state.p0_other, height=100)
+            e_recog = st.text_input("面談の認識(有/無)", value=st.session_state.p0_recog)
+            e_exp = st.text_input("利用経験(有/無)", value=st.session_state.p0_exp)
+        with c3:
+            e_age = st.text_input("生年月日・年齢", value=st.session_state.p0_age)
+            e_cert = st.text_input("保有資格", value=st.session_state.p0_cert)
+
+        st.markdown("#### 🏢 職務経歴")
+        e_history = st.text_area("職務経歴 (※複数社ある場合はここに追記されます)", value=st.session_state.p0_history, height=250)
+
+        st.markdown("#### 🚀 転職理由・キャリア観")
+        c4, c5, c6 = st.columns(3)
+        with c4: e_reason1 = st.text_area("転職を考えたきっかけ", value=st.session_state.p0_reason1, height=120)
+        with c5: e_reason2 = st.text_area("転職で叶えたいこと", value=st.session_state.p0_reason2, height=120)
+        with c6: e_reason3 = st.text_area("今後のビジョン", value=st.session_state.p0_reason3, height=120)
+
+        st.markdown("#### 💪 強み・弱み")
+        c7, c8 = st.columns(2)
+        with c7:
+            e_str = st.text_input("自分の強み", value=st.session_state.p0_str)
+            e_str_ep = st.text_area("強みエピソード", value=st.session_state.p0_str_ep, height=100)
+        with c8:
+            e_weak = st.text_input("弱み", value=st.session_state.p0_weak)
+            e_weak_ep = st.text_area("弱みエピソード", value=st.session_state.p0_weak_ep, height=100)
+
+        st.markdown("#### 🎯 就職活動希望条件")
+        c9, c10, c11 = st.columns(3)
+        with c9:
+            e_c_job = st.text_input("希望職種・業務", value=st.session_state.p0_c_job)
+            e_c_loc = st.text_input("希望勤務地", value=st.session_state.p0_c_loc)
+            e_c_date = st.text_input("入社希望日", value=st.session_state.p0_c_date)
+        with c10:
+            e_c_cur_sal = st.text_input("現在年収・給与", value=st.session_state.p0_c_cur_sal)
+            e_c_req_sal = st.text_input("希望年収・給与", value=st.session_state.p0_c_req_sal)
+        with c11:
+            e_c_time = st.text_input("勤務時間・休日", value=st.session_state.p0_c_time)
+            e_c_vibes = st.text_input("社風・雰囲気", value=st.session_state.p0_c_vibes)
+
+        st.markdown("#### 📅 その他確認・次回設定")
+        c12, c13 = st.columns([2, 1])
+        with c12: e_o_ans = st.text_area("確認事項や不安ごと", value=st.session_state.p0_o_ans, height=100)
+        with c13:
+            e_o_ndate = st.text_input("次回面談日", value=st.session_state.p0_o_ndate)
+            e_o_ntime = st.text_input("次回面談時間", value=st.session_state.p0_o_ntime)
 
         # Word出力機能
         st.divider()
         carte_dict = {
-            "エージェント名": e_agent,
-            "求職者名": e_seeker,
-            "基本情報": e_basic,
+            "エージェント名": e_agent, "求職者名": e_seeker,
+            "エージェント面談の認識": e_recog, "エージェントの利用経験": e_exp,
+            "生年月日・年齢": e_age, "保有資格": e_cert, "現在の勤務状況": e_status,
             "職務経歴": e_history,
-            "転職理由・キャリア観": e_career,
-            "強み・弱み": e_sw,
-            "希望条件": e_cond,
-            "その他確認・次回設定": e_other
+            "転職を考えたきっかけ": e_reason1, "今回の転職で叶えたいこと": e_reason2, "今後のビジョン": e_reason3,
+            "自分の強み": e_str, "強みエピソード": e_str_ep, "弱み": e_weak, "弱みエピソード": e_weak_ep,
+            "希望職種・業務": e_c_job, "希望勤務地": e_c_loc, "現在年収・給与": e_c_cur_sal, "希望年収・給与": e_c_req_sal,
+            "勤務時間・休日": e_c_time, "社風・雰囲気": e_c_vibes, "入社希望日": e_c_date,
+            "確認事項や不安ごと": e_o_ans, "次回面談日": e_o_ndate, "次回面談時間": e_o_ntime
         }
         docx_file = create_carte_docx(carte_dict)
         st.download_button(
@@ -704,5 +751,6 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
