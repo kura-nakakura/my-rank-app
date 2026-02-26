@@ -596,9 +596,20 @@ if app_mode == "0. 初回面談 (カルテ作成)":
 
         with c_btn_s:
             if st.button("📊 スプレッドシートに自動転記", type="primary", use_container_width=True):
-                with st.spinner("スプレッドシートを更新中..."):
-                    # ★変更：抽出・修正された面談日（e_interview_date）を転記関数に渡す
-                    success, message = export_to_spreadsheet(e_agent, e_seeker, e_interview_date)
+                with st.spinner("スプレッドシートを作成し、詳細データを入力中..."):
+                    
+                    # 1. AIが抽出したデータから、新しいシートに流し込む「追加情報」をセット
+                    additional_info = {
+                        "company_name": "（未入力）",  # Phase1で企業名が決まればここに入ります
+                        "age": e_age,               # AIが拾った年齢
+                        "change_count": "確認中",    # ここはAIに数えさせるか手入力
+                        "short_term_leave": "確認中",# ここはAIに判定させるか手入力
+                        "management": e_history     # 職歴の中に「マネジメント」の文字があるか判定用
+                    }
+
+                    # 2. パワーアップした関数を呼び出す
+                    success, message = export_to_spreadsheet(e_agent, e_seeker, e_interview_date, additional_info)
+                    
                     if success:
                         st.success(message)
                     else:
@@ -951,6 +962,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
