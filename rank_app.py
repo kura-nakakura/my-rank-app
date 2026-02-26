@@ -5,12 +5,15 @@ import re
 from pypdf import PdfReader
 import time
 from docx import Document
-# ★追加：Wordのフォント（明朝体）を強制設定するためのライブラリ
 from docx.shared import Pt
 from docx.oxml.ns import qn
 from io import BytesIO
 import requests
 from bs4 import BeautifulSoup
+# ★追加：スプレッドシートを操作するためのライブラリ
+import gspread
+from google.oauth2.service_account import Credentials
+import datetime
 
 # ==========================================
 # 🎨 デザイン定義
@@ -66,7 +69,6 @@ st.markdown("""
     padding: 15px; margin-top: 10px;
 }
 
-/* マーカー(.emerald-box)を持つコンテナを確実にオーロラエメラルドにするハック */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.emerald-box) {
     background: linear-gradient(135deg, rgba(0, 229, 255, 0.05) 0%, rgba(0, 255, 153, 0.15) 50%, rgba(0, 229, 255, 0.05) 100%) !important;
     border: 1px solid rgba(0, 255, 153, 0.5) !important;
@@ -74,7 +76,6 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.emerald-box) {
     border-radius: 12px !important;
 }
 
-/* ブラウザが:hasをサポートしていない場合の予備設定 */
 [data-testid="stVerticalBlockBorderWrapper"] {
     background: linear-gradient(135deg, rgba(0, 229, 255, 0.02) 0%, rgba(0, 255, 153, 0.08) 50%, rgba(0, 229, 255, 0.02) 100%);
     border: 1px solid rgba(0, 255, 153, 0.3);
@@ -148,11 +149,8 @@ def get_section(name, text):
     match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
     return match.group(1).strip() if match else f"{name}の情報が生成されませんでした。プロンプトを再確認してください。"
 
-# ★変更：Wordの日本語フォントを「ＭＳ 明朝」に強制設定
 def create_docx(history_text):
     doc = Document()
-    
-    # 全体のデフォルトフォントを明朝体に設定
     style = doc.styles['Normal']
     style.font.name = 'ＭＳ 明朝'
     style.font._element.rPr.rFonts.set(qn('w:eastAsia'), 'ＭＳ 明朝')
@@ -164,11 +162,8 @@ def create_docx(history_text):
     doc.save(bio)
     return bio.getvalue()
 
-# ★変更：Wordの日本語フォントを「ＭＳ 明朝」に強制設定
 def create_carte_docx(carte_dict):
     doc = Document()
-    
-    # 全体のデフォルトフォントを明朝体に設定
     style = doc.styles['Normal']
     style.font.name = 'ＭＳ 明朝'
     style.font._element.rPr.rFonts.set(qn('w:eastAsia'), 'ＭＳ 明朝')
@@ -180,6 +175,64 @@ def create_carte_docx(carte_dict):
     bio = BytesIO()
     doc.save(bio)
     return bio.getvalue()
+
+# ★追加：スプレッドシート自動転記用の専用関数
+def export_to_spreadsheet(agent_name, seeker_name):
+    try:
+        # StreamlitのSecretsから認証情報を読み込む
+        credentials_dict = dict(st.secrets["gcp_service_account"])
+        scopes = ['https://www.googleapis.com/auth/spreadsheets']
+        creds = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
+        gc = gspread.authorize(creds)
+        
+        # エージェント名でスプレッドシートIDを判定（今回は「中倉」のみ設定）
+        if agent_name == "中倉":
+            sheet_id = "1mPf7VGMYEIN6hYiUWEsFEmDfLNGnx9c4fQM26dhhrM0"
+        else:
+            return False, "登録されていないエージェント名です。スプレッドシートの紐付けがありません。"
+
+        sh = gc.open_by_key(sheet_id)
+        
+        # 1. 「原本」シートをコピーして個人シートを作成
+        try:
+            original_ws = sh.worksheet("原本")
+            # 既に同じ名前のシートがあるかチェック
+            existing_sheets = [ws.title for ws in sh.worksheets()]
+            new_sheet_name = f"{seeker_name}様"
+            if new_sheet_name in existing_sheets:
+                # 被った場合は日時を付ける
+                new_sheet_name = f"{seeker_name}様_{datetime.datetime.now().strftime('%m%d%H%M')}"
+            
+            # シートの複製
+            new_ws = original_ws.duplicate(insert_sheet_index=1, new_sheet_name=new_sheet_name)
+            new_ws_id = new_ws.id
+            new_ws_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit#gid={new_ws_id}"
+            
+        except Exception as e:
+            return False, f"原本シートのコピーに失敗しました: {e}"
+
+        # 2. 「求職者管理表」シートのE列, F列に追記
+        try:
+            list_ws = sh.worksheet("求職者管理表")
+            # E列(5列目)の値をすべて取得し、空ではない最後の行+1を「次の空き行」とする
+            col_e_values = list_ws.col_values(5)
+            next_row = len(col_e_values) + 1
+            
+            # E列にハイパーリンク数式、F列に今日の日付を入れる（関数が入っている他の列は絶対触らない）
+            today_str = datetime.datetime.now().strftime("%Y/%m/%d")
+            hyperlink_formula = f'=HYPERLINK("{new_ws_url}", "{seeker_name}")'
+            
+            # value_input_option='USER_ENTERED' にすることで数式として認識させる
+            list_ws.update_cell(next_row, 5, hyperlink_formula)
+            list_ws.update_cell(next_row, 6, today_str)
+            
+        except Exception as e:
+            return False, f"求職者管理表への追記に失敗しました: {e}"
+
+        return True, "スプレッドシートの更新が完了しました！"
+        
+    except Exception as e:
+        return False, f"スプレッドシートへの接続エラー: {e}"
 
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 # ==========================================
@@ -422,11 +475,9 @@ if app_mode == "0. 初回面談 (カルテ作成)":
     if st.session_state.get("p0_generated"):
         st.markdown(f'<div class="cyber-panel"><div class="scan-line"></div><h3>📋 抽出されたカルテ情報</h3><p style="color:white; font-size:14px;">※手作業で修正・追記が可能です</p></div>', unsafe_allow_html=True)
         
-        # ★追加修正：見出しを綺麗に表示
         st.markdown("<br>", unsafe_allow_html=True)
         st.subheader("📄 職務経歴書に直結する情報")
         with st.container(border=True):
-            # ★CSSを発動させるための透明マーカー
             st.markdown('<div class="emerald-box"></div>', unsafe_allow_html=True)
             e_seeker = st.text_input("求職者名", value=st.session_state.p0_seeker)
             
@@ -448,11 +499,9 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 e_weak = st.text_input("弱み", value=st.session_state.p0_weak)
                 e_weak_ep = st.text_area("弱みエピソード", value=st.session_state.p0_weak_ep, height=100)
 
-        # ★追加修正：見出しを綺麗に表示
         st.markdown("<br>", unsafe_allow_html=True)
         st.subheader("🏢 エージェント管理・条件情報")
         with st.container(border=True):
-            # ★CSSを発動させるための透明マーカー
             st.markdown('<div class="emerald-box"></div>', unsafe_allow_html=True)
             e_agent = st.text_input("エージェント名", value=st.session_state.p0_agent)
             
@@ -487,27 +536,40 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 e_o_ndate = st.text_input("次回面談日", value=st.session_state.p0_o_ndate)
                 e_o_ntime = st.text_input("次回面談時間", value=st.session_state.p0_o_ntime)
 
-        # Word出力機能
+        # 出力ボタン群（WordDLとスプシ転記）
         st.divider()
-        carte_dict_updated = {
-            "エージェント名": e_agent, "求職者名": e_seeker,
-            "エージェント面談の認識": e_recog, "エージェントの利用経験": e_exp,
-            "生年月日・年齢": e_age, "保有資格": e_cert, "現在の勤務状況": e_status,
-            "職務経歴": e_history,
-            "転職を考えたきっかけ": e_reason1, "今回の転職で叶えたいこと": e_reason2, "今後のビジョン": e_reason3,
-            "自分の強み": e_str, "強みエピソード": e_str_ep, "弱み": e_weak, "弱みエピソード": e_weak_ep,
-            "希望職種・業務": e_c_job, "希望勤務地": e_c_loc, "現在年収・給与": e_c_cur_sal, "希望年収・給与": e_c_req_sal,
-            "勤務時間・休日": e_c_time, "社風・雰囲気": e_c_vibes, "入社希望日": e_c_date,
-            "確認事項や不安ごと": e_o_ans, "次回面談日": e_o_ndate, "次回面談時間": e_o_ntime
-        }
-        docx_file = create_carte_docx(carte_dict_updated)
-        st.download_button(
-            label="📥 この面談カルテをWordでダウンロード",
-            data=docx_file,
-            file_name=f"面談カルテ_{e_seeker}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            type="primary"
-        )
+        c_btn_w, c_btn_s, _ = st.columns([1, 1, 2])
+        
+        with c_btn_w:
+            carte_dict_updated = {
+                "エージェント名": e_agent, "求職者名": e_seeker,
+                "エージェント面談の認識": e_recog, "エージェントの利用経験": e_exp,
+                "生年月日・年齢": e_age, "保有資格": e_cert, "現在の勤務状況": e_status,
+                "職務経歴": e_history,
+                "転職を考えたきっかけ": e_reason1, "今回の転職で叶えたいこと": e_reason2, "今後のビジョン": e_reason3,
+                "自分の強み": e_str, "強みエピソード": e_str_ep, "弱み": e_weak, "弱みエピソード": e_weak_ep,
+                "希望職種・業務": e_c_job, "希望勤務地": e_c_loc, "現在年収・給与": e_c_cur_sal, "希望年収・給与": e_c_req_sal,
+                "勤務時間・休日": e_c_time, "社風・雰囲気": e_c_vibes, "入社希望日": e_c_date,
+                "確認事項や不安ごと": e_o_ans, "次回面談日": e_o_ndate, "次回面談時間": e_o_ntime
+            }
+            docx_file = create_carte_docx(carte_dict_updated)
+            st.download_button(
+                label="📥 この面談カルテをWordでDL",
+                data=docx_file,
+                file_name=f"面談カルテ_{e_seeker}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                type="primary"
+            )
+
+        # ★追加：スプレッドシートへの自動転記ボタン
+        with c_btn_s:
+            if st.button("📊 スプレッドシートに自動転記", type="primary", use_container_width=True):
+                with st.spinner("スプレッドシートを更新中..."):
+                    success, message = export_to_spreadsheet(e_agent, e_seeker)
+                    if success:
+                        st.success(message)
+                    else:
+                        st.error(message)
 # ==========================================
 # Phase 1: 応募時 (ランク判定)
 # ==========================================
@@ -856,6 +918,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
