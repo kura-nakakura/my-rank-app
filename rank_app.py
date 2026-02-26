@@ -22,47 +22,32 @@ st.set_page_config(page_title="AIエージェントシステム PRO", page_icon=
 
 st.markdown("""
 <style>
-/* 全体の背景設定 */
 .stApp {
     background-color: #0A192F;
     background-image: linear-gradient(rgba(10, 25, 47, 0.9), rgba(10, 25, 47, 0.9)),
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300e5ff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300e5ff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
-/* サイバーエメラルド箱（上：職務経歴書用） */
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.emerald-box) {
-    background: linear-gradient(135deg, rgba(0, 229, 255, 0.05) 0%, rgba(0, 255, 153, 0.15) 50%, rgba(0, 229, 255, 0.05) 100%) !important;
-    border: 1px solid rgba(0, 255, 153, 0.5) !important;
-    box-shadow: 0 0 20px rgba(0, 255, 153, 0.2) !important;
-    border-radius: 12px !important;
+@keyframes move-bg {
+    0% { background_position: 0 0; }
+    100% { background_position: 1000px 1000px; }
+}
+.stApp::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background-image: radial-gradient(#00E5FF 1.5px, transparent 1.5px);
+    background-size: 50px 50px;
+    opacity: 0.15;
+    animation: move-bg 30s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+.block-container {
+    position: relative;
+    z-index: 1;
 }
 
-/* ★超重要：ホワイトカード箱（下：エージェント管理用） */
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.white-card-box) {
-    background-color: #FFFFFF !important;
-    border: 1px solid #E0E0E0 !important;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2) !important;
-    border-radius: 15px !important;
-    padding: 25px !important;
-}
-
-/* ホワイトカード内のラベル・タイトル文字を「濃い紺色」で上書き */
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.white-card-box) label p,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.white-card-box) h3,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.white-card-box) h4 {
-    color: #071624 !important;
-    font-weight: 800 !important;
-}
-
-/* ホワイトカード内の入力フォームをさらに見やすく調整 */
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.white-card-box) input,
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.white-card-box) textarea {
-    background-color: #F8F9FA !important;
-    color: #071624 !important;
-    border: 1px solid #B0BEC5 !important;
-}
-
-/* 汎用スタイル */
 .cyber-panel {
     background: rgba(23, 42, 70, 0.7);
     border: 1px solid #00E5FF;
@@ -71,11 +56,37 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.white-card-box) textarea {
     position: relative; overflow: hidden;
 }
 
+.scan-line {
+    position: absolute; top: -100%; left: -100%; width: 300%; height: 300%;
+    background: linear-gradient(to bottom, transparent, rgba(0, 229, 255, 0.4) 50%, transparent);
+    transform: rotate(45deg); animation: scan 2.5s ease-in-out forwards; pointer-events: none;
+}
+@keyframes scan { 0% { top: -150%; } 100% { top: 150%; } }
+
+.fb-box {
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 4px solid #00E5FF;
+    padding: 15px; margin-top: 10px;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.emerald-box) {
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.05) 0%, rgba(0, 255, 153, 0.15) 50%, rgba(0, 229, 255, 0.05) 100%) !important;
+    border: 1px solid rgba(0, 255, 153, 0.5) !important;
+    box-shadow: 0 0 20px rgba(0, 255, 153, 0.2) !important;
+    border-radius: 12px !important;
+}
+
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.02) 0%, rgba(0, 255, 153, 0.08) 50%, rgba(0, 229, 255, 0.02) 100%);
+    border: 1px solid rgba(0, 255, 153, 0.3);
+}
+
 label p, .stTextInput label, .stNumberInput label, .stTextArea label, .stRadio label, .stSelectbox label { 
     color: #FFFFFF !important; 
     font-weight: bold !important; 
     font-size: 1rem !important;
 }
+[data-testid="stMetricValue"] { color: #00E5FF !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -392,20 +403,35 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 prompt = f"""
                 あなたは優秀なキャリアアドバイザーのアシスタントです。
                 以下の「面談の文字起こし・メモ」から、求職者の情報を抽出して整理してください。
+                情報が語られていない項目は「不明」または「記載なし」と記載してください。
+
+                【面談データ】
+                {combined_memo}
 
                 【抽出フォーマット（絶対厳守）】
-                【面談日】(YYYY/MM/DD形式)
+                以下の【】で囲まれたセクション名を必ず使用し、各項目を個別に抽出してください。
+
+                【面談日】
+                (YYYY/MM/DD形式)
                 【エージェント名】
                 【求職者名】
                 【エージェント面談の認識】
                 【エージェントの利用経験】
-                【生年月日・年齢】(数字のみ)
+                【生年月日・年齢】
                 【保有資格】
                 【現在の勤務状況】
-                【転職回数】(数字のみ)
-                【短期離職数】(数字のみ)
+
+                # --- 今回追加した重要項目 ---
+                【転職回数】
+                (在職中も含めた合計社数-1)
+                【短期離職数】
+                (1年以内の離職回数)
                 【応募企業名】
-                【職務経歴】(社数分すべて詳細に抽出すること)
+                (具体的な社名があれば記載、なければ「（未入力）」)
+                # --------------------------
+
+                【職務経歴】
+                (社数分ループ)
                 【転職を考えたきっかけ】
                 【今回の転職で叶えたいこと】
                 【入社後どうなっていたいか】
@@ -423,9 +449,6 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 【求職者からの確認事項や不安ごと】
                 【次回面談日】
                 【次回面談時間】
-
-                【面談データ】
-                {combined_memo}
                 """
                 try:
                     resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
@@ -434,15 +457,19 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                     st.session_state.p0_interview_date = get_section("面談日", res)
                     st.session_state.p0_agent = get_section("エージェント名", res)
                     st.session_state.p0_seeker = get_section("求職者名", res)
+                    
+                    # ★追加項目の受け取り
                     st.session_state.p0_change_count = get_section("転職回数", res)
                     st.session_state.p0_short_term = get_section("短期離職数", res)
                     st.session_state.p0_company = get_section("応募企業名", res)
+
+                    # (以下、既存の get_section 処理を継続...)
                     st.session_state.p0_recog = get_section("エージェント面談の認識", res)
                     st.session_state.p0_exp = get_section("エージェントの利用経験", res)
                     st.session_state.p0_age = get_section("生年月日・年齢", res)
                     st.session_state.p0_cert = get_section("保有資格", res)
                     st.session_state.p0_status = get_section("現在の勤務状況", res)
-                    st.session_state.p0_history = get_section("職務経歴", res) # ★再点検
+                    st.session_state.p0_history = get_section("職務経歴", res)
                     st.session_state.p0_reason1 = get_section("転職を考えたきっかけ", res)
                     st.session_state.p0_reason2 = get_section("今回の転職で叶えたいこと", res)
                     st.session_state.p0_reason3 = get_section("入社後どうなっていたいか", res)
@@ -463,92 +490,144 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                     
                     st.session_state.p0_generated = True
 
-                    # 履歴保存
                     carte_dict = {
-                        "面談日": st.session_state.p0_interview_date, "エージェント名": st.session_state.p0_agent,
-                        "求職者名": st.session_state.p0_seeker, "職務経歴": st.session_state.p0_history
+                        "面談日": st.session_state.p0_interview_date, # ★追加
+                        "エージェント名": st.session_state.p0_agent, "求職者名": st.session_state.p0_seeker,
+                        "エージェント面談の認識": st.session_state.p0_recog, "エージェントの利用経験": st.session_state.p0_exp,
+                        "生年月日・年齢": st.session_state.p0_age, "保有資格": st.session_state.p0_cert, "現在の勤務状況": st.session_state.p0_status,
+                        "職務経歴": st.session_state.p0_history,
+                        "転職を考えたきっかけ": st.session_state.p0_reason1, "今回の転職で叶えたいこと": st.session_state.p0_reason2, "今後のビジョン": st.session_state.p0_reason3,
+                        "自分の強み": st.session_state.p0_str, "強みエピソード": st.session_state.p0_str_ep, "弱み": st.session_state.p0_weak, "弱みエピソード": st.session_state.p0_weak_ep,
+                        "希望職種・業務": st.session_state.p0_c_job, "希望勤務地": st.session_state.p0_c_loc, "現在年収・給与": st.session_state.p0_c_cur_sal, "希望年収・給与": st.session_state.p0_c_req_sal,
+                        "勤務時間・休日": st.session_state.p0_c_time, "社風・雰囲気": st.session_state.p0_c_vibes, "入社希望日": st.session_state.p0_c_date,
+                        "確認事項や不安ごと": st.session_state.p0_o_ans, "次回面談日": st.session_state.p0_o_ndate, "次回面談時間": st.session_state.p0_o_ntime
                     }
-                    st.session_state.carte_log.insert(0, {"time": time.strftime('%Y/%m/%d %H:%M'), "name": st.session_state.p0_seeker, "data": carte_dict})
-                except Exception as e: st.error(f"解析エラー: {e}")
+                    st.session_state.carte_log.insert(0, {
+                        "time": time.strftime('%Y/%m/%d %H:%M'),
+                        "name": st.session_state.p0_seeker if st.session_state.p0_seeker else "未入力",
+                        "data": carte_dict
+                    })
+                    if len(st.session_state.carte_log) > 20: st.session_state.carte_log.pop()
 
-    # 表示・編集エリア
+                except Exception as e:
+                    st.error(f"解析エラー: {e}")
+
+    # 自動抽出されたデータの表示と編集
     if st.session_state.get("p0_generated"):
-        st.markdown(f'<div class="cyber-panel"><div class="scan-line"></div><h3>📋 抽出されたカルテ情報</h3></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="cyber-panel"><div class="scan-line"></div><h3>📋 抽出されたカルテ情報</h3><p style="color:white; font-size:14px;">※手作業で修正・追記が可能です</p></div>', unsafe_allow_html=True)
         
-        # --- 📄 職務経歴書に直結する情報（サイバーエメラルド背景） ---
         st.markdown("<br>", unsafe_allow_html=True)
         st.subheader("📄 職務経歴書に直結する情報")
         with st.container(border=True):
             st.markdown('<div class="emerald-box"></div>', unsafe_allow_html=True)
             e_seeker = st.text_input("求職者名", value=st.session_state.p0_seeker)
-            # ★職務経歴がしっかり表示されるように再定義
-            e_history = st.text_area("職務経歴 (複数社対応)", value=st.session_state.p0_history, height=300)
             
-            c_r1, c_r2, c_r3 = st.columns(3)
-            with c_r1: e_reason1 = st.text_area("きっかけ", value=st.session_state.p0_reason1, height=100)
-            with c_r2: e_reason2 = st.text_area("叶えたいこと", value=st.session_state.p0_reason2, height=100)
-            with c_r3: e_reason3 = st.text_area("ビジョン", value=st.session_state.p0_reason3, height=100)
+            st.markdown("#### 🏢 職務経歴")
+            e_history = st.text_area("職務経歴 (複数社対応)", value=st.session_state.p0_history, height=250)
             
-            c_sw1, c_sw2 = st.columns(2)
-            with c_sw1:
-                e_str = st.text_input("強み", value=st.session_state.p0_str)
-                e_str_ep = st.text_area("強みエピ", value=st.session_state.p0_str_ep, height=100)
-            with c_sw2:
-                e_weak = st.text_input("弱み", value=st.session_state.p0_weak)
-                e_weak_ep = st.text_area("弱みエピ", value=st.session_state.p0_weak_ep, height=100)
+            st.markdown("#### 🚀 転職理由・キャリア観")
+            c4, c5, c6 = st.columns(3)
+            with c4: e_reason1 = st.text_area("転職を考えたきっかけ", value=st.session_state.p0_reason1, height=120)
+            with c5: e_reason2 = st.text_area("転職で叶えたいこと", value=st.session_state.p0_reason2, height=120)
+            with c6: e_reason3 = st.text_area("今後のビジョン", value=st.session_state.p0_reason3, height=120)
 
-        # --- 🏢 エージェント管理・条件情報（★ホワイト背景★） ---
+            st.markdown("#### 💪 強み・弱み")
+            c7, c8 = st.columns(2)
+            with c7:
+                e_str = st.text_input("自分の強み", value=st.session_state.p0_str)
+                e_str_ep = st.text_area("強みエピソード", value=st.session_state.p0_str_ep, height=100)
+            with c8:
+                e_weak = st.text_input("弱み", value=st.session_state.p0_weak)
+                e_weak_ep = st.text_area("弱みエピソード", value=st.session_state.p0_weak_ep, height=100)
+
         st.markdown("<br>", unsafe_allow_html=True)
         st.subheader("🏢 エージェント管理・条件情報")
         with st.container(border=True):
-            st.markdown('<div class="white-card-box"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="emerald-box"></div>', unsafe_allow_html=True)
+            
+            # ★変更：エージェント名の横に「面談日」を表示・修正できるように追加
             c_ag1, c_ag2 = st.columns(2)
             with c_ag1: e_agent = st.text_input("エージェント名", value=st.session_state.p0_agent)
-            with c_ag2: e_interview_date = st.text_input("面談日", value=st.session_state.p0_interview_date)
+            with c_ag2: e_interview_date = st.text_input("面談日 (不明・空欄時は今日の日付で転記)", value=st.session_state.p0_interview_date)
             
             st.markdown("#### 👤 基本情報")
-            c_b1, c_b2, c_b3 = st.columns(3)
-            with c_b1:
-                e_status = st.text_input("勤務状況", value=st.session_state.p0_status)
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                e_status = st.text_input("現在の勤務状況", value=st.session_state.p0_status)
                 e_cert = st.text_input("保有資格", value=st.session_state.p0_cert)
-            with c_b2:
-                e_recog = st.text_input("面談の認識", value=st.session_state.p0_recog)
-                e_exp = st.text_input("利用経験", value=st.session_state.p0_exp)
-            with c_b3:
-                e_age = st.text_input("年齢 (数字のみ)", value=st.session_state.p0_age)
+            with c2:
+                e_recog = st.text_input("面談の認識(有/無)", value=st.session_state.p0_recog)
+                e_exp = st.text_input("利用経験(有/無)", value=st.session_state.p0_exp)
+            with c3:
+                e_age = st.text_input("生年月日・年齢", value=st.session_state.p0_age)
+            
+            st.markdown("#### 🎯 就職活動希望条件")
+            c9, c10, c11 = st.columns(3)
+            with c9:
+                e_c_job = st.text_input("希望職種・業務", value=st.session_state.p0_c_job)
+                e_company = st.text_input("応募企業名", value=st.session_state.p0_company) # 追加
+                e_c_loc = st.text_input("希望勤務地", value=st.session_state.p0_c_loc)
+                e_c_date = st.text_input("入社希望日", value=st.session_state.p0_c_date)
+            with c10:
+                e_c_cur_sal = st.text_input("現在年収・給与", value=st.session_state.p0_c_cur_sal)
+                e_c_req_sal = st.text_input("希望年収・給与", value=st.session_state.p0_c_req_sal)
+                e_change_count = st.text_input("転職回数", value=st.session_state.p0_change_count) # 追加
+                e_short_term = st.text_input("短期離職数", value=st.session_state.p0_short_term)   # 追加
+            with c11:
+                e_c_time = st.text_input("勤務時間・休日", value=st.session_state.p0_c_time)
+                e_c_vibes = st.text_input("社風・雰囲気", value=st.session_state.p0_c_vibes)
 
-            st.markdown("#### 🎯 希望条件・分析")
-            c_d1, c_d2, c_d3 = st.columns(3)
-            with c_d1:
-                e_c_job = st.text_input("希望職種", value=st.session_state.p0_c_job)
-                e_company = st.text_input("応募企業名", value=st.session_state.p0_company)
-            with c_d2:
-                e_change_count = st.text_input("転職回数", value=st.session_state.p0_change_count)
-                e_short_term = st.text_input("短期離職数", value=st.session_state.p0_short_term)
-            with c_d3:
-                e_c_cur_sal = st.text_input("現在年収", value=st.session_state.p0_c_cur_sal)
-                e_c_req_sal = st.text_input("希望年収", value=st.session_state.p0_c_req_sal)
-
-            st.markdown("#### 📅 その他・次回設定")
-            c_o1, c_o2 = st.columns([2, 1])
-            with c_o1: e_o_ans = st.text_area("確認事項", value=st.session_state.p0_o_ans, height=100)
-            with c_o2:
+            st.markdown("#### 📅 その他確認・次回設定")
+            c12, c13 = st.columns([2, 1])
+            with c12: e_o_ans = st.text_area("確認事項や不安ごと", value=st.session_state.p0_o_ans, height=100)
+            with c13:
                 e_o_ndate = st.text_input("次回面談日", value=st.session_state.p0_o_ndate)
                 e_o_ntime = st.text_input("次回面談時間", value=st.session_state.p0_o_ntime)
 
-        # ボタン
+        # 出力ボタン群
         st.divider()
         c_btn_w, c_btn_s, _ = st.columns([1, 1, 2])
+        
         with c_btn_w:
-            docx_file = create_carte_docx({"求職者名": e_seeker, "職務経歴": e_history})
-            st.download_button(label="📥 WordでDL", data=docx_file, file_name=f"カルテ_{e_seeker}.docx", type="primary")
+            carte_dict_updated = {
+                "面談日": e_interview_date, # ★追加
+                "エージェント名": e_agent, "求職者名": e_seeker,
+                "エージェント面談の認識": e_recog, "エージェントの利用経験": e_exp,
+                "生年月日・年齢": e_age, "保有資格": e_cert, "現在の勤務状況": e_status,
+                "職務経歴": e_history,
+                "転職を考えたきっかけ": e_reason1, "今回の転職で叶えたいこと": e_reason2, "今後のビジョン": e_reason3,
+                "自分の強み": e_str, "強みエピソード": e_str_ep, "弱み": e_weak, "弱みエピソード": e_weak_ep,
+                "希望職種・業務": e_c_job, "希望勤務地": e_c_loc, "現在年収・給与": e_c_cur_sal, "希望年収・給与": e_c_req_sal,
+                "勤務時間・休日": e_c_time, "社風・雰囲気": e_c_vibes, "入社希望日": e_c_date,
+                "確認事項や不安ごと": e_o_ans, "次回面談日": e_o_ndate, "次回面談時間": e_o_ntime
+            }
+            docx_file = create_carte_docx(carte_dict_updated)
+            st.download_button(
+                label="📥 この面談カルテをWordでDL",
+                data=docx_file,
+                file_name=f"面談カルテ_{e_seeker}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                type="primary"
+            )
+
         with c_btn_s:
             if st.button("📊 スプレッドシートに自動転記", type="primary", use_container_width=True):
-                with st.spinner("転記中..."):
-                    info = {"company_name": e_company, "age": e_age, "change_count": e_change_count, "short_term_leave": e_short_term, "management": e_history}
+                with st.spinner("スプレッドシートを作成中..."):
+                    # 画面上で修正した最新の値をセットして送信
+                    info = {
+                        "company_name": e_company,      # 修正済み
+                        "age": e_age,
+                        "change_count": e_change_count, # 修正済み
+                        "short_term_leave": e_short_term, # 修正済み
+                        "management": e_history
+                    }
+
                     success, message = export_to_spreadsheet(e_agent, e_seeker, e_interview_date, info)
-                    if success: st.success(message)
-                    else: st.error(message)
+                    
+                    if success:
+                        st.success(message)
+                    else:
+                        st.error(message)
 # ==========================================
 # Phase 1: 応募時 (ランク判定)
 # ==========================================
@@ -897,6 +976,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
