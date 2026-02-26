@@ -63,14 +63,18 @@ st.markdown("""
     padding: 15px; margin-top: 10px;
 }
 
-/* ★追加：枠付き箱のオーロラエメラルド背景 */
-[data-testid="stVerticalBlockBorderWrapper"] {
+/* ★追加修正：マーカー(.emerald-box)を持つコンテナを確実にオーロラエメラルドにする強力なハック */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.emerald-box) {
     background: linear-gradient(135deg, rgba(0, 229, 255, 0.05) 0%, rgba(0, 255, 153, 0.15) 50%, rgba(0, 229, 255, 0.05) 100%) !important;
     border: 1px solid rgba(0, 255, 153, 0.5) !important;
-    box-shadow: 0 0 20px rgba(0, 255, 153, 0.15) !important;
+    box-shadow: 0 0 20px rgba(0, 255, 153, 0.2) !important;
     border-radius: 12px !important;
-    padding: 15px !important;
-    backdrop-filter: blur(5px);
+}
+
+/* ブラウザが:hasをサポートしていない場合の予備設定 */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.02) 0%, rgba(0, 255, 153, 0.08) 50%, rgba(0, 229, 255, 0.02) 100%);
+    border: 1px solid rgba(0, 255, 153, 0.3);
 }
 
 label p, .stTextInput label, .stNumberInput label, .stTextArea label, .stRadio label, .stSelectbox label { 
@@ -376,7 +380,6 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                     
                     st.session_state.p0_generated = True
 
-                    # ★追加：カルテ履歴を保存（上限20件）
                     carte_dict = {
                         "エージェント名": st.session_state.p0_agent, "求職者名": st.session_state.p0_seeker,
                         "エージェント面談の認識": st.session_state.p0_recog, "エージェントの利用経験": st.session_state.p0_exp,
@@ -402,9 +405,12 @@ if app_mode == "0. 初回面談 (カルテ作成)":
     if st.session_state.get("p0_generated"):
         st.markdown(f'<div class="cyber-panel"><div class="scan-line"></div><h3>📋 抽出されたカルテ情報</h3><p style="color:white; font-size:14px;">※手作業で修正・追記が可能です</p></div>', unsafe_allow_html=True)
         
-        # ★追加：UIを「書類用」と「管理用」で明確に箱(コンテナ)で分割！
-        st.markdown("<br>### 📄 職務経歴書に直結する情報", unsafe_allow_html=True)
+        # ★追加修正：見出しを綺麗に表示
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.subheader("📄 職務経歴書に直結する情報")
         with st.container(border=True):
+            # ★CSSを発動させるための透明マーカー
+            st.markdown('<div class="emerald-box"></div>', unsafe_allow_html=True)
             e_seeker = st.text_input("求職者名", value=st.session_state.p0_seeker)
             
             st.markdown("#### 🏢 職務経歴")
@@ -425,8 +431,12 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 e_weak = st.text_input("弱み", value=st.session_state.p0_weak)
                 e_weak_ep = st.text_area("弱みエピソード", value=st.session_state.p0_weak_ep, height=100)
 
-        st.markdown("<br>### 🏢 エージェント管理・条件情報", unsafe_allow_html=True)
+        # ★追加修正：見出しを綺麗に表示
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.subheader("🏢 エージェント管理・条件情報")
         with st.container(border=True):
+            # ★CSSを発動させるための透明マーカー
+            st.markdown('<div class="emerald-box"></div>', unsafe_allow_html=True)
             e_agent = st.text_input("エージェント名", value=st.session_state.p0_agent)
             
             st.markdown("#### 👤 基本情報")
@@ -829,6 +839,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
