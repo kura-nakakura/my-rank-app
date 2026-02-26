@@ -103,9 +103,16 @@ if "chat_messages" not in st.session_state:
     st.session_state.chat_messages = []
 if "p0_generated" not in st.session_state:
     st.session_state.p0_generated = False
-# ★追加：面談日用のセッション記憶
 if "p0_interview_date" not in st.session_state:
     st.session_state.p0_interview_date = ""
+
+# ★追加：エラー回避のための初期化（ここが抜けていたのが原因です）
+if "p0_change_count" not in st.session_state:
+    st.session_state.p0_change_count = ""
+if "p0_short_term" not in st.session_state:
+    st.session_state.p0_short_term = ""
+if "p0_company" not in st.session_state:
+    st.session_state.p0_company = ""
 
 # --- セキュリティ ---
 LOGIN_PASSWORD = "HR9237"
@@ -384,7 +391,7 @@ if app_mode == "0. 初回面談 (カルテ作成)":
         if not combined_memo.strip():
             st.warning("文字起こしファイルを添付するか、メモを入力してください。")
         else:
-            with st.spinner("AIが面談内容を詳細な項目ごとに分析・整理中..."):
+            with st.spinner("AIが面談内容を詳細に分析中..."):
                 prompt = f"""
                 あなたは優秀なキャリアアドバイザーのアシスタントです。
                 以下の「面談の文字起こし・メモ」から、求職者の情報を抽出して整理してください。
@@ -394,10 +401,10 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 {combined_memo}
 
                 【抽出フォーマット（絶対厳守）】
-                以下の【】で囲まれたセクション名を必ず使用し、各項目を個別に抽出してください。見出しは変更しないでください。
+                以下の【】で囲まれたセクション名を必ず使用し、各項目を個別に抽出してください。
 
                 【面談日】
-                (文字起こしから面談日を抽出し、YYYY/MM/DD形式で記載。不明な場合は「不明」)
+                (YYYY/MM/DD形式)
                 【エージェント名】
                 【求職者名】
                 【エージェント面談の認識】
@@ -405,33 +412,25 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 【生年月日・年齢】
                 【保有資格】
                 【現在の勤務状況】
+
+                # --- 今回追加した重要項目 ---
                 【転職回数】
-                (例：3回。在職中も含めた合計社数-1)
+                (在職中も含めた合計社数-1)
                 【短期離職数】
-                (例：1回。1年以内の離職がある場合にカウント)
+                (1年以内の離職回数)
                 【応募企業名】
-                (面談の中で具体的な企業名が出ていれば記載、なければ「（未入力）」)
+                (具体的な社名があれば記載、なければ「（未入力）」)
+                # --------------------------
 
                 【職務経歴】
-                ※【重要】経験社数が複数ある場合は、以下のフォーマットを「■1社目」「■2社目」と社数分繰り返してすべて出力してください。
-                ■〇社目：[会社名]
-                ・雇用形態：
-                ・部署／役職：
-                ・職種：
-                ・主な業務内容：
-                ・入社理由：
-                ・実績や成果：
-                ・退職理由：
-
+                (社数分ループ)
                 【転職を考えたきっかけ】
                 【今回の転職で叶えたいこと】
                 【入社後どうなっていたいか】
-
                 【自分の強み】
                 【強みエピソード】
                 【弱み】
                 【自分の弱みエピソード】
-
                 【希望職種・業務】
                 【希望勤務地】
                 【現在年収・給与】
@@ -439,7 +438,6 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 【勤務時間・休日】
                 【社風・雰囲気】
                 【入社希望日】
-
                 【求職者からの確認事項や不安ごと】
                 【次回面談日】
                 【次回面談時間】
@@ -448,31 +446,29 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                     resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
                     res = resp.text
 
-                    # ★追加：面談日の抽出
                     st.session_state.p0_interview_date = get_section("面談日", res)
                     st.session_state.p0_agent = get_section("エージェント名", res)
                     st.session_state.p0_seeker = get_section("求職者名", res)
+                    
+                    # ★追加項目の受け取り
+                    st.session_state.p0_change_count = get_section("転職回数", res)
+                    st.session_state.p0_short_term = get_section("短期離職数", res)
+                    st.session_state.p0_company = get_section("応募企業名", res)
+
+                    # (以下、既存の get_section 処理を継続...)
                     st.session_state.p0_recog = get_section("エージェント面談の認識", res)
                     st.session_state.p0_exp = get_section("エージェントの利用経験", res)
                     st.session_state.p0_age = get_section("生年月日・年齢", res)
                     st.session_state.p0_cert = get_section("保有資格", res)
                     st.session_state.p0_status = get_section("現在の勤務状況", res)
-                    st.session_state.p0_age = get_section("生年月日・年齢", res)
-                    st.session_state.p0_change_count = get_section("転職回数", res) # 追加
-                    st.session_state.p0_short_term = get_section("短期離職数", res) # 追加
-                    st.session_state.p0_company = get_section("応募企業名", res)   # 追加
-                    
                     st.session_state.p0_history = get_section("職務経歴", res)
-                    
                     st.session_state.p0_reason1 = get_section("転職を考えたきっかけ", res)
                     st.session_state.p0_reason2 = get_section("今回の転職で叶えたいこと", res)
                     st.session_state.p0_reason3 = get_section("入社後どうなっていたいか", res)
-                    
                     st.session_state.p0_str = get_section("自分の強み", res)
                     st.session_state.p0_str_ep = get_section("強みエピソード", res)
                     st.session_state.p0_weak = get_section("弱み", res)
                     st.session_state.p0_weak_ep = get_section("自分の弱みエピソード", res)
-                    
                     st.session_state.p0_c_job = get_section("希望職種・業務", res)
                     st.session_state.p0_c_loc = get_section("希望勤務地", res)
                     st.session_state.p0_c_cur_sal = get_section("現在年収・給与", res)
@@ -480,7 +476,6 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                     st.session_state.p0_c_time = get_section("勤務時間・休日", res)
                     st.session_state.p0_c_vibes = get_section("社風・雰囲気", res)
                     st.session_state.p0_c_date = get_section("入社希望日", res)
-                    
                     st.session_state.p0_o_ans = get_section("求職者からの確認事項や不安ごと", res)
                     st.session_state.p0_o_ndate = get_section("次回面談日", res)
                     st.session_state.p0_o_ntime = get_section("次回面談時間", res)
@@ -973,6 +968,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
