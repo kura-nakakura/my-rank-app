@@ -196,7 +196,7 @@ with st.sidebar:
 # ==========================================
 if app_mode == "0. 初回面談 (カルテ作成)":
     st.title("Phase 0: 初回面談ヒアリング (カルテ自動生成)")
-    st.markdown("Google Meet等の文字起こしテキストを貼り付けるか、音声を録音することで、AIが自動で項目を整理します。")
+    st.markdown("文字起こしファイル(PDF/TXT)を添付するか、テキストを直接貼り付けてください。AIが自動で項目を整理します。")
 
     components.html("""
     <div style="font-family: sans-serif; margin-bottom: 10px;">
@@ -215,8 +215,6 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
                 }
-                // Streamlitの親要素(テキストエリア)に直接値を送るハックは不安定なため、
-                // 今回はシンプルにクリップボードにコピーさせるか、専用枠に出してコピペさせます。
             };
             startBtn.onclick = () => { recognition.start(); startBtn.disabled = true; stopBtn.disabled = false; };
             stopBtn.onclick = () => { recognition.stop(); startBtn.disabled = false; stopBtn.disabled = true; };
@@ -224,42 +222,93 @@ if app_mode == "0. 初回面談 (カルテ作成)":
     </script>
     """, height=90)
 
-    # メインの入力エリア（コピペでも音声でもOK）
-    raw_memo = st.text_area("📝 面談メモ / 文字起こしテキスト (ここにテキストを貼り付けてください)", height=250, placeholder="ここにGoogle Meetの文字起こしをペーストしてください...")
+    # ★追加：ファイルアップロード機能
+    u_files_memo = st.file_uploader("📂 文字起こしファイルなど (PDF/TXT)", accept_multiple_files=True, key="p0_up")
+
+    # メインの入力エリア
+    raw_memo = st.text_area("📝 面談メモ / 文字起こしテキスト (手入力・コピペ用)", height=200, placeholder="ここにテキストをペースト、または手書きメモを入力してください...")
 
     if st.button("🪄 AIで項目を自動抽出", type="primary"):
-        if not raw_memo.strip():
-            st.warning("文字起こしテキスト、またはメモを入力してください。")
+        # ★追加：添付ファイルとテキストエリアの文字を合体させる
+        file_text = read_files(u_files_memo) if u_files_memo else ""
+        combined_memo = file_text + "\n" + raw_memo
+
+        if not combined_memo.strip():
+            st.warning("文字起こしファイルを添付するか、メモを入力してください。")
         else:
             with st.spinner("AIが面談内容を分析・整理中..."):
                 prompt = f"""
                 あなたは優秀なキャリアアドバイザーのアシスタントです。
                 以下の「面談の文字起こし・メモ」から、求職者の情報を抽出して整理してください。
-                情報が語られていない項目は「不明」と記載してください。
+                情報が語られていない項目は「不明」または「記載なし」と記載してください。
 
                 【面談データ】
-                {raw_memo}
+                {combined_memo}
 
                 【抽出フォーマット（絶対厳守）】
-                【氏名】
-                【年齢】
-                【現職・前職】
-                【転職理由】
+                以下の【】で囲まれたセクション名を必ず使用し、各項目を抽出してください。
+
+                【エージェント名】
+                (面談を担当しているエージェントの名前)
+
+                【求職者名】
+                (求職者の名前)
+
+                【基本情報】
+                ・エージェント面談の認識（有/無）：
+                ・エージェントの利用経験（有/無）：
+                ・生年月日／年齢：
+                ・保有資格：
+                ・現在の勤務状況（在職中/離職中）：
+
+                【職務経歴】
+                ※【重要】経験社数が複数ある場合は、以下のフォーマットを「■1社目」「■2社目」と社数分繰り返してすべて出力してください。
+                ■〇社目：[会社名]
+                ・雇用形態（正社員/アルバイト/業務委託/契約社員など）：
+                ・部署／役職：
+                ・職種：
+                ・主な業務内容：
+                ・入社理由：
+                ・実績や成果：
+                ・退職理由：
+
+                【転職理由・キャリア観】
+                ・転職を考えたきっかけ：
+                ・今回の転職で叶えたいこと：
+                ・入社後どうなっていたいか（今後のビジョン）：
+
+                【強み・弱み】
+                ・自分の強み：
+                ・強みエピソード：
+                ・弱み：
+                ・自分の弱みエピソード：
+
                 【希望条件】
-                【強み・スキル】
-                【その他特記事項】
+                ・希望職種・業務：
+                ・希望勤務地（沿線・通勤時間）：
+                ・現在年収・給与：
+                ・希望年収・給与：
+                ・勤務時間・休日：
+                ・社風・雰囲気：
+                ・入社希望日：
+
+                【その他確認・次回設定】
+                ・求職者からの確認事項や不安ごと：
+                ・次回面談日：
+                ・次回面談時間：
                 """
                 try:
                     resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
                     res = resp.text
 
-                    st.session_state.p0_name = get_section("氏名", res)
-                    st.session_state.p0_age = get_section("年齢", res)
-                    st.session_state.p0_job = get_section("現職・前職", res)
-                    st.session_state.p0_reason = get_section("転職理由", res)
-                    st.session_state.p0_condition = get_section("希望条件", res)
-                    st.session_state.p0_skill = get_section("強み・スキル", res)
-                    st.session_state.p0_note = get_section("その他特記事項", res)
+                    st.session_state.p0_agent = get_section("エージェント名", res)
+                    st.session_state.p0_seeker = get_section("求職者名", res)
+                    st.session_state.p0_basic = get_section("基本情報", res)
+                    st.session_state.p0_history = get_section("職務経歴", res)
+                    st.session_state.p0_career = get_section("転職理由・キャリア観", res)
+                    st.session_state.p0_sw = get_section("強み・弱み", res)
+                    st.session_state.p0_cond = get_section("希望条件", res)
+                    st.session_state.p0_other = get_section("その他確認・次回設定", res)
                     st.session_state.p0_generated = True
 
                 except Exception as e:
@@ -269,33 +318,39 @@ if app_mode == "0. 初回面談 (カルテ作成)":
     if st.session_state.get("p0_generated"):
         st.markdown(f'<div class="cyber-panel"><div class="scan-line"></div><h3>📋 抽出されたカルテ情報</h3><p style="color:white; font-size:14px;">※手作業で修正・追記が可能です</p></div>', unsafe_allow_html=True)
         
+        # エージェント名・求職者名（単一行入力）
+        c_name1, c_name2 = st.columns(2)
+        with c_name1: e_agent = st.text_input("エージェント名", value=st.session_state.p0_agent)
+        with c_name2: e_seeker = st.text_input("求職者名", value=st.session_state.p0_seeker)
+        
+        # 各種詳細情報（複数行テキストエリア）
         c1, c2 = st.columns(2)
         with c1:
-            e_name = st.text_input("氏名", value=st.session_state.p0_name)
-            e_age = st.text_input("年齢", value=st.session_state.p0_age)
-            e_job = st.text_area("現職・前職", value=st.session_state.p0_job, height=130)
-            e_skill = st.text_area("強み・スキル", value=st.session_state.p0_skill, height=130)
+            e_basic = st.text_area("基本情報 (面談認識/年齢/資格/状況など)", value=st.session_state.p0_basic, height=150)
+            e_career = st.text_area("転職理由・キャリア観", value=st.session_state.p0_career, height=150)
+            e_cond = st.text_area("就職活動希望条件", value=st.session_state.p0_cond, height=200)
         with c2:
-            e_reason = st.text_area("転職理由", value=st.session_state.p0_reason, height=130)
-            e_condition = st.text_area("希望条件", value=st.session_state.p0_condition, height=130)
-            e_note = st.text_area("その他特記事項", value=st.session_state.p0_note, height=130)
+            e_history = st.text_area("職務経歴 (複数社対応)", value=st.session_state.p0_history, height=250)
+            e_sw = st.text_area("強み・弱み (エピソード含む)", value=st.session_state.p0_sw, height=150)
+            e_other = st.text_area("その他確認事項・次回面談設定", value=st.session_state.p0_other, height=100)
 
         # Word出力機能
         st.divider()
         carte_dict = {
-            "氏名": e_name,
-            "年齢": e_age,
-            "現職・前職": e_job,
-            "転職理由": e_reason,
-            "希望条件": e_condition,
-            "強み・スキル": e_skill,
-            "その他特記事項": e_note
+            "エージェント名": e_agent,
+            "求職者名": e_seeker,
+            "基本情報": e_basic,
+            "職務経歴": e_history,
+            "転職理由・キャリア観": e_career,
+            "強み・弱み": e_sw,
+            "希望条件": e_cond,
+            "その他確認・次回設定": e_other
         }
         docx_file = create_carte_docx(carte_dict)
         st.download_button(
-            label="📥 このカルテをWordでダウンロード",
+            label="📥 この面談カルテをWordでダウンロード",
             data=docx_file,
-            file_name=f"面談カルテ_{e_name}.docx",
+            file_name=f"面談カルテ_{e_seeker}.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             type="primary"
         )
@@ -649,4 +704,5 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
