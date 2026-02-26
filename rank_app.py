@@ -103,6 +103,9 @@ if "chat_messages" not in st.session_state:
     st.session_state.chat_messages = []
 if "p0_generated" not in st.session_state:
     st.session_state.p0_generated = False
+# ★追加：面談日用のセッション記憶
+if "p0_interview_date" not in st.session_state:
+    st.session_state.p0_interview_date = ""
 
 # --- セキュリティ ---
 LOGIN_PASSWORD = "HR9237"
@@ -176,16 +179,14 @@ def create_carte_docx(carte_dict):
     doc.save(bio)
     return bio.getvalue()
 
-# ★追加：スプレッドシート自動転記用の専用関数
-def export_to_spreadsheet(agent_name, seeker_name):
+# ★変更：面談日(interview_date)を受け取るように関数をアップデート
+def export_to_spreadsheet(agent_name, seeker_name, interview_date):
     try:
-        # StreamlitのSecretsから認証情報を読み込む
         credentials_dict = dict(st.secrets["gcp_service_account"])
         scopes = ['https://www.googleapis.com/auth/spreadsheets']
         creds = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
         gc = gspread.authorize(creds)
         
-        # エージェント名でスプレッドシートIDを判定（今回は「中倉」のみ設定）
         if agent_name == "中倉":
             sheet_id = "1mPf7VGMYEIN6hYiUWEsFEmDfLNGnx9c4fQM26dhhrM0"
         else:
@@ -193,17 +194,13 @@ def export_to_spreadsheet(agent_name, seeker_name):
 
         sh = gc.open_by_key(sheet_id)
         
-        # 1. 「原本」シートをコピーして個人シートを作成
         try:
             original_ws = sh.worksheet("原本")
-            # 既に同じ名前のシートがあるかチェック
             existing_sheets = [ws.title for ws in sh.worksheets()]
             new_sheet_name = f"{seeker_name}様"
             if new_sheet_name in existing_sheets:
-                # 被った場合は日時を付ける
                 new_sheet_name = f"{seeker_name}様_{datetime.datetime.now().strftime('%m%d%H%M')}"
             
-            # シートの複製
             new_ws = original_ws.duplicate(insert_sheet_index=1, new_sheet_name=new_sheet_name)
             new_ws_id = new_ws.id
             new_ws_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit#gid={new_ws_id}"
@@ -211,20 +208,21 @@ def export_to_spreadsheet(agent_name, seeker_name):
         except Exception as e:
             return False, f"原本シートのコピーに失敗しました: {e}"
 
-        # 2. 「求職者管理表」シートのE列, F列に追記
         try:
             list_ws = sh.worksheet("求職者管理表")
-            # E列(5列目)の値をすべて取得し、空ではない最後の行+1を「次の空き行」とする
             col_e_values = list_ws.col_values(5)
             next_row = len(col_e_values) + 1
             
-            # E列にハイパーリンク数式、F列に今日の日付を入れる（関数が入っている他の列は絶対触らない）
-            today_str = datetime.datetime.now().strftime("%Y/%m/%d")
+            # ★変更：面談日が空、または「不明」などの場合は今日の日付を強制的に使う
+            if not interview_date or interview_date in ["不明", "記載なし", "なし"]:
+                final_date = datetime.datetime.now().strftime("%Y/%m/%d")
+            else:
+                final_date = interview_date
+
             hyperlink_formula = f'=HYPERLINK("{new_ws_url}", "{seeker_name}")'
             
-            # value_input_option='USER_ENTERED' にすることで数式として認識させる
             list_ws.update_cell(next_row, 5, hyperlink_formula)
-            list_ws.update_cell(next_row, 6, today_str)
+            list_ws.update_cell(next_row, 6, final_date)
             
         except Exception as e:
             return False, f"求職者管理表への追記に失敗しました: {e}"
@@ -249,7 +247,6 @@ with st.sidebar:
     st.divider()
     my_name = st.text_input("アドバイザー名", placeholder="山田 太郎")
     
-    # ★追加：面談カルテ履歴 (20件)
     st.divider()
     st.subheader("📋 面談カルテ履歴 (最新20件)")
     if not st.session_state.carte_log:
@@ -258,6 +255,8 @@ with st.sidebar:
         for i, log in enumerate(st.session_state.carte_log):
             with st.expander(f"👤 {log['time']} ({log['name']}様)"):
                 if st.button("🔄 復元", key=f"c_res_{i}"):
+                    # ★追加：履歴復元時に面談日も呼び出す
+                    st.session_state.p0_interview_date = log["data"].get("面談日", "不明")
                     st.session_state.p0_agent = log["data"]["エージェント名"]
                     st.session_state.p0_seeker = log["data"]["求職者名"]
                     st.session_state.p0_recog = log["data"]["エージェント面談の認識"]
@@ -373,6 +372,8 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 【抽出フォーマット（絶対厳守）】
                 以下の【】で囲まれたセクション名を必ず使用し、各項目を個別に抽出してください。見出しは変更しないでください。
 
+                【面談日】
+                (文字起こしから面談日を抽出し、YYYY/MM/DD形式で記載。不明な場合は「不明」)
                 【エージェント名】
                 【求職者名】
                 【エージェント面談の認識】
@@ -417,6 +418,8 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                     resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
                     res = resp.text
 
+                    # ★追加：面談日の抽出
+                    st.session_state.p0_interview_date = get_section("面談日", res)
                     st.session_state.p0_agent = get_section("エージェント名", res)
                     st.session_state.p0_seeker = get_section("求職者名", res)
                     st.session_state.p0_recog = get_section("エージェント面談の認識", res)
@@ -451,6 +454,7 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                     st.session_state.p0_generated = True
 
                     carte_dict = {
+                        "面談日": st.session_state.p0_interview_date, # ★追加
                         "エージェント名": st.session_state.p0_agent, "求職者名": st.session_state.p0_seeker,
                         "エージェント面談の認識": st.session_state.p0_recog, "エージェントの利用経験": st.session_state.p0_exp,
                         "生年月日・年齢": st.session_state.p0_age, "保有資格": st.session_state.p0_cert, "現在の勤務状況": st.session_state.p0_status,
@@ -503,7 +507,11 @@ if app_mode == "0. 初回面談 (カルテ作成)":
         st.subheader("🏢 エージェント管理・条件情報")
         with st.container(border=True):
             st.markdown('<div class="emerald-box"></div>', unsafe_allow_html=True)
-            e_agent = st.text_input("エージェント名", value=st.session_state.p0_agent)
+            
+            # ★変更：エージェント名の横に「面談日」を表示・修正できるように追加
+            c_ag1, c_ag2 = st.columns(2)
+            with c_ag1: e_agent = st.text_input("エージェント名", value=st.session_state.p0_agent)
+            with c_ag2: e_interview_date = st.text_input("面談日 (不明・空欄時は今日の日付で転記)", value=st.session_state.p0_interview_date)
             
             st.markdown("#### 👤 基本情報")
             c1, c2, c3 = st.columns(3)
@@ -536,12 +544,13 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 e_o_ndate = st.text_input("次回面談日", value=st.session_state.p0_o_ndate)
                 e_o_ntime = st.text_input("次回面談時間", value=st.session_state.p0_o_ntime)
 
-        # 出力ボタン群（WordDLとスプシ転記）
+        # 出力ボタン群
         st.divider()
         c_btn_w, c_btn_s, _ = st.columns([1, 1, 2])
         
         with c_btn_w:
             carte_dict_updated = {
+                "面談日": e_interview_date, # ★追加
                 "エージェント名": e_agent, "求職者名": e_seeker,
                 "エージェント面談の認識": e_recog, "エージェントの利用経験": e_exp,
                 "生年月日・年齢": e_age, "保有資格": e_cert, "現在の勤務状況": e_status,
@@ -561,11 +570,11 @@ if app_mode == "0. 初回面談 (カルテ作成)":
                 type="primary"
             )
 
-        # ★追加：スプレッドシートへの自動転記ボタン
         with c_btn_s:
             if st.button("📊 スプレッドシートに自動転記", type="primary", use_container_width=True):
                 with st.spinner("スプレッドシートを更新中..."):
-                    success, message = export_to_spreadsheet(e_agent, e_seeker)
+                    # ★変更：抽出・修正された面談日（e_interview_date）を転記関数に渡す
+                    success, message = export_to_spreadsheet(e_agent, e_seeker, e_interview_date)
                     if success:
                         st.success(message)
                     else:
@@ -918,6 +927,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
