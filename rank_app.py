@@ -63,6 +63,16 @@ st.markdown("""
     padding: 15px; margin-top: 10px;
 }
 
+/* ★追加：枠付き箱のオーロラエメラルド背景 */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.05) 0%, rgba(0, 255, 153, 0.15) 50%, rgba(0, 229, 255, 0.05) 100%) !important;
+    border: 1px solid rgba(0, 255, 153, 0.5) !important;
+    box-shadow: 0 0 20px rgba(0, 255, 153, 0.15) !important;
+    border-radius: 12px !important;
+    padding: 15px !important;
+    backdrop-filter: blur(5px);
+}
+
 label p, .stTextInput label, .stNumberInput label, .stTextArea label, .stRadio label, .stSelectbox label { 
     color: #FFFFFF !important; 
     font-weight: bold !important; 
@@ -819,6 +829,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
