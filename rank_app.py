@@ -21,6 +21,9 @@ import datetime
 # 今後エージェントが増えたらここに追加するだけでOKです
 AGENT_SHEETS = {
     "中倉": "1mPf7VGMYEIN6hYiUWEsFEmDfLNGnx9c4fQM26dhhrM0",
+    "福島": "1clnbuoPvHC3yJ9NtWpVGZihi_o5PfQO5JWC_I8h3UCU",
+    "木村": "1aJzGK9LMVIjToOTD6Pe4fiGVxV1FXUDaOxY4FqhcIUc",
+    "仲本": "1s1whowg_T8IloYB6XrWbK0zEKzurOU1MhwDQFz-TBZI",
     # "山田": "山田用のスプレッドシートID",
 }
 AGENT_LIST = list(AGENT_SHEETS.keys())
@@ -1007,6 +1010,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
