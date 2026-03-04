@@ -6,4 +6,5 @@ pypdf
 python-docx
 gspread
 google-auth
+openpyxl
 
