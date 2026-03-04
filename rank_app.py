@@ -464,7 +464,7 @@ else:
 # Phase 0: 初回面談 (カルテ作成)
 # ==========================================
 if app_mode == "2. カルテ作成":
-    st.title("初回面談時：カルテ自動生成)")
+    st.title("初回面談時：カルテ自動生成")
     st.markdown("文字起こしファイル(PDF/TXT)を添付するか、テキストを直接貼り付けてください。AIが自動で項目を整理します。")
 
     components.html("""
@@ -1212,6 +1212,7 @@ elif app_mode == "4. 書類審査":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
