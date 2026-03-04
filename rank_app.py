@@ -35,135 +35,140 @@ AGENT_LIST = list(AGENT_SHEETS.keys())
 # ==========================================
 import base64
 
-# ★追加：画像を読み込んでCSSで使える形式(Base64)に変換する関数
-def get_base64_image(image_path):
+# ★変更：動画を読み込んでBase64形式に変換する関数
+def get_base64_video(video_path):
     try:
-        with open(image_path, "rb") as img_file:
-            return base64.b64encode(img_file.read()).decode()
+        with open(video_path, "rb") as video_file:
+            return base64.b64encode(video_file.read()).decode()
     except Exception as e:
-        return "" # 画像が見つからない場合は空を返す
-
-# 背景画像のファイル名（同じフォルダに置いてある想定です）
-bg_base64 = get_base64_image("IMG_8641.jpg")
+        return ""
 
 st.set_page_config(page_title="AIエージェントシステム PRO", page_icon="🤖", layout="wide")
 
-# 画像が見つかった場合はその画像を、見つからなかった場合は予備のライトグレーを設定
-if bg_base64:
-    bg_css = f"""
-    background-image: url("data:image/jpeg;base64,{bg_base64}");
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
+# ★動画のファイル名（アップロードした名前に完全一致させます）
+video_base64 = get_base64_video("ScreenRecording_03-04-2026 13-38-53_1.mov")
+
+# 動画が見つかった場合、全画面の背景としてループ再生させるHTMLを挿入
+if video_base64:
+    video_html = f"""
+    <video autoplay loop muted playsinline style="position: fixed; right: 0; bottom: 0; min-width: 100%; min-height: 100%; z-index: -1; object-fit: cover; opacity: 0.8;">
+        <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
+    </video>
     """
-else:
-    bg_css = "background-color: #F0F4F8;"
+    st.markdown(video_html, unsafe_allow_html=True)
 
-st.markdown(f"""
+# ★ダーク・ネオサイバー仕様のCSS
+st.markdown("""
 <style>
-/* 1. 背景の設定（上のPythonコードで生成した画像を適用） */
-.stApp {{
-    {bg_css}
-}}
+/* 1. 背景の設定: Streamlitの元々の背景を透明にし、裏の動画を見せる */
+.stApp {
+    background-color: transparent !important; 
+    background-image: none !important;
+}
+header {
+    background-color: transparent !important;
+}
 
-/* 2. メイン画面の文字色を深いブルーにして「白飛び」を防止 */
+/* 2. メイン画面の文字色: ダークな動画に合わせて白ベースに */
 .main .block-container h1, .main .block-container h2, .main .block-container h3, 
 .main .block-container h4, .main .block-container p, .main .block-container span, 
-.main .block-container div {{
-    color: #1A365D !important;
-}}
-
-/* 3. サイドバーはダークなままで文字を白く保つ */
-[data-testid="stSidebar"] {{
-    background-color: rgba(10, 25, 47, 0.95) !important;
-}}
-[data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] h1, 
-[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] label {{
+.main .block-container div {
     color: #FFFFFF !important;
-}}
+    text-shadow: 0px 2px 4px rgba(0,0,0,0.8); /* 動画の上でも文字が読めるように影をつける */
+}
+
+/* 3. サイドバー: より深く、透過させる */
+[data-testid="stSidebar"] {
+    background-color: rgba(5, 15, 30, 0.85) !important;
+    backdrop-filter: blur(10px);
+}
+[data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] h1, 
+[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] label {
+    color: #00E5FF !important; /* サイドバーの文字はサイバーブルー */
+    text-shadow: none !important;
+}
 
 /* 4. コンテナとブロックの設定 */
-.block-container {{
+.block-container {
     position: relative;
     z-index: 1;
-}}
+}
 
-/* 5. 各パネルのデザイン: すりガラス風（ガラスモーフィズム） */
-.cyber-panel, [data-testid="stVerticalBlockBorderWrapper"] {{
-    background: rgba(255, 255, 255, 0.85) !important; /* 背景画像が透けすぎないように白を強めに */
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(0, 229, 255, 0.4) !important; 
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15) !important;
+/* 5. 各パネルのデザイン: ダークグラスモーフィズム（黒いすりガラス） */
+.cyber-panel, [data-testid="stVerticalBlockBorderWrapper"] {
+    background: rgba(10, 20, 40, 0.6) !important; 
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 229, 255, 0.3) !important; 
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
     border-radius: 12px !important;
     padding: 25px;
     margin-top: 20px;
     position: relative;
     overflow: hidden;
-}}
+}
 
 /* 6. HUD風の装飾（パネルの角のアクセント） */
-.cyber-panel::before, [data-testid="stVerticalBlockBorderWrapper"]::before {{
+.cyber-panel::before, [data-testid="stVerticalBlockBorderWrapper"]::before {
     content: ""; position: absolute; top: 0; left: 0; width: 25px; height: 25px;
     border-top: 3px solid #00E5FF; border-left: 3px solid #00E5FF;
     border-top-left-radius: 12px;
-}}
-.cyber-panel::after, [data-testid="stVerticalBlockBorderWrapper"]::after {{
+}
+.cyber-panel::after, [data-testid="stVerticalBlockBorderWrapper"]::after {
     content: ""; position: absolute; bottom: 0; right: 0; width: 25px; height: 25px;
     border-bottom: 3px solid #00E5FF; border-right: 3px solid #00E5FF;
     border-bottom-right-radius: 12px;
-}}
+}
 
 /* 7. フィードバックボックスの設定 */
-.fb-box {{
-    background: rgba(0, 229, 255, 0.05) !important; 
+.fb-box {
+    background: rgba(0, 229, 255, 0.1) !important; 
     border-left: 4px solid #00E5FF !important; 
     padding: 15px;
     margin-top: 10px;
     border-radius: 6px;
-}}
+}
 
-/* 8. 入力フォーム（テキストボックス等）の背景と文字色を明示的に指定 */
-.stTextInput input, .stTextArea textarea, .stNumberInput input {{
-    background-color: rgba(255, 255, 255, 0.9) !important;
-    color: #1A365D !important;
-    border: 1px solid rgba(0, 229, 255, 0.5) !important;
+/* 8. 入力フォーム（テキストボックス等）の背景と文字色 */
+.stTextInput input, .stTextArea textarea, .stNumberInput input {
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    color: #FFFFFF !important;
+    border: 1px solid rgba(0, 229, 255, 0.4) !important;
     border-radius: 6px !important;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05) !important;
-}}
+}
 
 /* テキストエリアのプレースホルダー（薄い文字）の色 */
-::placeholder {{
-    color: #A0AEC0 !important;
+::placeholder {
+    color: #8899A6 !important;
     opacity: 1 !important;
-}}
+}
 
 /* 9. メトリック（数字）の値の色 */
-[data-testid="stMetricValue"] {{
-    color: #0077FF !important; 
+[data-testid="stMetricValue"] {
+    color: #00E5FF !important; 
     font-weight: bold;
     font-size: 2.5rem !important;
-}}
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+}
 
 /* 10. ボタンの設定 */
-.stButton>button {{
+.stButton>button {
     border-radius: 8px !important;
     font-weight: bold !important;
     transition: all 0.3s ease;
-}}
-.stButton>button[kind="primary"] {{
+}
+.stButton>button[kind="primary"] {
     background: linear-gradient(135deg, #00E5FF 0%, #0077FF 100%) !important;
     color: white !important;
     border: none !important;
-    box-shadow: 0 4px 10px rgba(0, 229, 255, 0.3) !important;
-}}
-.stButton>button[kind="primary"]:hover {{
-    box-shadow: 0 6px 15px rgba(0, 229, 255, 0.5) !important;
+    box-shadow: 0 4px 10px rgba(0, 229, 255, 0.4) !important;
+}
+.stButton>button[kind="primary"]:hover {
+    box-shadow: 0 6px 15px rgba(0, 229, 255, 0.7) !important;
     transform: translateY(-2px);
-}}
+}
 </style>
 """, unsafe_allow_html=True)
-
 # ==========================================
 # 💾 セッション記憶
 # ==========================================
@@ -1208,6 +1213,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
