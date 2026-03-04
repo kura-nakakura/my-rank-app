@@ -464,7 +464,7 @@ else:
 # Phase 0: 初回面談 (カルテ作成)
 # ==========================================
 if app_mode == "2. カルテ作成":
-    st.title("Phase 0: 初回面談ヒアリング (カルテ自動生成)")
+    st.title("初回面談時：カルテ自動生成)")
     st.markdown("文字起こしファイル(PDF/TXT)を添付するか、テキストを直接貼り付けてください。AIが自動で項目を整理します。")
 
     components.html("""
@@ -748,7 +748,7 @@ if app_mode == "2. カルテ作成":
 # Phase 1: 応募時 (ランク判定)
 # ==========================================
 elif app_mode == "1. ランク判定":
-    st.title("Phase 1: 応募時簡易分析")
+    st.title("応募時簡易分析: ランク判定")
     col1, col2, col3 = st.columns(3)
     with col1: age = st.number_input("年齢", 18, 85, 25) 
     with col2: job_changes = st.number_input("転職回数", 0, 15, 1)
@@ -796,7 +796,7 @@ elif app_mode == "1. ランク判定":
 # Phase 2: 初回面談後 (詳細分析/書類作成)
 # ==========================================
 elif app_mode == "3. 書類作成＆分析":
-    st.title("Phase 2: 詳細分析 & 高品質書類一括作成")
+    st.title("初回面談後: 書類作成＆分析")
     
     c_top1, c_top2 = st.columns(2)
     with c_top1: t_ind = st.text_input("志望業種", placeholder="未入力の場合は添付資料から判断します")
@@ -1111,7 +1111,7 @@ elif app_mode == "3. 書類作成＆分析":
 # Phase 3: マッチ審査
 # ==========================================
 elif app_mode == "4. 書類審査":
-    st.title("Phase 3: 書類審査・マッチ度・推薦文")
+    st.title("書類作成後: 書類審査＆推薦文作成＆面接対策")
     m_mode = st.radio("分析モード", ["1. 簡易マッチング", "2. 詳細マッチング"], horizontal=True)
     
     if m_mode == "1. 簡易マッチング":
@@ -1212,6 +1212,7 @@ elif app_mode == "4. 書類審査":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
