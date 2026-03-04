@@ -14,6 +14,8 @@ from bs4 import BeautifulSoup
 import gspread
 from google.oauth2.service_account import Credentials
 import datetime
+# ★追加：Excelファイルを操作するためのライブラリ
+import openpyxl
 
 # ==========================================
 # ⚙️ システム設定・マスタ管理（★追加）
@@ -200,6 +202,30 @@ def create_carte_docx(carte_dict):
     return bio.getvalue()
 
 # ==========================================
+# ★追加：Excelテンプレートの文字置き換え関数
+# ==========================================
+def fill_excel_template(template_file, replacement_dict):
+    # Excelファイルを読み込む
+    wb = openpyxl.load_workbook(template_file)
+    
+    # 全てのシートを順番にチェック
+    for sheet in wb.worksheets:
+        for row in sheet.iter_rows():
+            for cell in row:
+                # セルに文字が入っている場合のみ処理
+                if cell.value and isinstance(cell.value, str):
+                    for key, val in replacement_dict.items():
+                        # セルの中に {{志望動機}} などのキーがあれば置き換える
+                        if key in cell.value:
+                            # 万が一 None などの値が来た時のために str() で文字列化しておく
+                            cell.value = cell.value.replace(key, str(val))
+                            
+    # メモリ上に保存して返す
+    bio = BytesIO()
+    wb.save(bio)
+    return bio.getvalue()
+
+# ==========================================
 # 📊 スプレッドシート転記・詳細入力メイン関数
 # ==========================================
 def export_to_spreadsheet(agent_name, seeker_name, interview_date, additional_data=None):
@@ -283,7 +309,6 @@ def export_to_spreadsheet(agent_name, seeker_name, interview_date, additional_da
         
     except Exception as e:
         return False, f"エラー: {e}"
-
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 # ==========================================
@@ -864,6 +889,40 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
         st.subheader("📄 志望動機")
         st.code(st.session_state.phase2_motive, language="text")
         
+        # ==========================================
+        # ★追加：デザイン済みExcel履歴書への自動流し込み機能
+        # ==========================================
+        st.divider()
+        st.subheader("📊 Excel履歴書への自動流し込み（職歴・志望動機など）")
+        st.info("※事前にExcelの履歴書(.xlsx)のセルに {{氏名}}、{{職務経歴}}、{{志望動機}} と入力して保存しておいてください。")
+        
+        u_excel_template = st.file_uploader("履歴書テンプレート (Excel形式: .xlsx)", type=["xlsx"], key="excel_tpl_up")
+        
+        if u_excel_template:
+            # 置き換えたい「目印（キー）」と「実際の文字（バリュー）」のペアを作ります
+            replacements = {
+                "{{氏名}}": st.session_state.p0_seeker if st.session_state.get("p0_seeker") else "未入力",
+                "{{職務経歴}}": st.session_state.phase2_combined,
+                "{{志望動機}}": st.session_state.phase2_motive
+            }
+            
+            if st.button("✨ Excelに流し込んでダウンロード", type="primary"):
+                try:
+                    # 上で作った fill_excel_template 関数を呼び出す
+                    new_excel_data = fill_excel_template(u_excel_template, replacements)
+                    
+                    st.success("書き換え成功！以下のボタンからダウンロードできます。")
+                    safe_seeker_name = st.session_state.p0_seeker if st.session_state.get("p0_seeker") else "求職者"
+                    st.download_button(
+                        label="📥 完成したExcel履歴書をダウンロード",
+                        data=new_excel_data,
+                        file_name=f"完成版_履歴書_{safe_seeker_name}_{time.strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        type="primary"
+                    )
+                except Exception as e:
+                    st.error(f"Excelの処理中にエラーが発生しました: {e}")
+
         # --- AIチャット機能 ---
         st.divider()
         st.subheader("💬 AIアシスタントと内容を調整する")
@@ -1010,6 +1069,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
