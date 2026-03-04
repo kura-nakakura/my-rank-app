@@ -376,7 +376,7 @@ app_mode = st.radio(
     [
         "1. ランク判定", 
         "2. カルテ作成", 
-        "3. 書類作成＆分析", 
+        "3. 書類作成", 
         "4. 書類審査"
     ],
     horizontal=True,
@@ -795,7 +795,7 @@ elif app_mode == "1. ランク判定":
 # ==========================================
 # Phase 2: 初回面談後 (詳細分析/書類作成)
 # ==========================================
-elif app_mode == "3. 書類作成＆分析":
+elif app_mode == "3. 書類作成":
     st.title("初回面談後: 書類作成＆分析")
     
     c_top1, c_top2 = st.columns(2)
@@ -1212,6 +1212,7 @@ elif app_mode == "4. 書類審査":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
