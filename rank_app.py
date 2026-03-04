@@ -1154,7 +1154,7 @@ elif app_mode == "4. 書類審査":
             s_files = st.file_uploader("完成書類", accept_multiple_files=True, key="s_up_3")
 
         if st.button("詳細審査 & 推薦文作成", type="primary"):
-            if not my_name: st.error("アドバイザー名を入力してください。")
+            if not agent_name: st.error("アドバイザー名を入力してください。")
             else:
                 with st.spinner("審査中..."):
                     c_data = read_files(c_files) + "\n" + (get_url_text(c_url_3) if c_url_3 else "")
@@ -1212,6 +1212,7 @@ elif app_mode == "4. 書類審査":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
