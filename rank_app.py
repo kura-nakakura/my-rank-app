@@ -888,40 +888,120 @@ elif app_mode == "2. 初回面談後 (詳細分析/書類作成)":
         
         st.subheader("📄 志望動機")
         st.code(st.session_state.phase2_motive, language="text")
-        
+
         # ==========================================
-        # ★追加：デザイン済みExcel履歴書への自動流し込み機能
+        # ★追加：デザイン済みExcel履歴書への完全自動流し込み機能
         # ==========================================
         st.divider()
-        st.subheader("📊 Excel履歴書への自動流し込み（職歴・志望動機など）")
-        st.info("※事前にExcelの履歴書(.xlsx)のセルに {{氏名}}、{{職務経歴}}、{{志望動機}} と入力して保存しておいてください。")
+        st.subheader("📊 Excel履歴書への完全自動流し込み")
+        st.info("※タグ（{{ふりがな}}や{{歴年1}}など）を配置したExcelテンプレートをアップロードしてください。")
         
         u_excel_template = st.file_uploader("履歴書テンプレート (Excel形式: .xlsx)", type=["xlsx"], key="excel_tpl_up")
         
         if u_excel_template:
-            # 置き換えたい「目印（キー）」と「実際の文字（バリュー）」のペアを作ります
-            replacements = {
-                "{{氏名}}": st.session_state.p0_seeker if st.session_state.get("p0_seeker") else "未入力",
-                "{{職務経歴}}": st.session_state.phase2_combined,
-                "{{志望動機}}": st.session_state.phase2_motive
-            }
-            
-            if st.button("✨ Excelに流し込んでダウンロード", type="primary"):
-                try:
-                    # 上で作った fill_excel_template 関数を呼び出す
-                    new_excel_data = fill_excel_template(u_excel_template, replacements)
-                    
-                    st.success("書き換え成功！以下のボタンからダウンロードできます。")
-                    safe_seeker_name = st.session_state.p0_seeker if st.session_state.get("p0_seeker") else "求職者"
-                    st.download_button(
-                        label="📥 完成したExcel履歴書をダウンロード",
-                        data=new_excel_data,
-                        file_name=f"完成版_履歴書_{safe_seeker_name}_{time.strftime('%Y%m%d')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        type="primary"
-                    )
-                except Exception as e:
-                    st.error(f"Excelの処理中にエラーが発生しました: {e}")
+            if st.button("✨ 履歴書データを解析してExcelに流し込む", type="primary"):
+                with st.spinner("求職者のデータを解析し、Excelにマッピング中..."):
+                    try:
+                        import json
+                        seeker_raw_data = read_files(u_files_seeker) if u_files_seeker else ""
+                        seeker_raw_data += "\n" + achievement
+                        
+                        json_prompt = f"""
+                        あなたは履歴書データ抽出のプロです。以下の求職者データから、履歴書作成に必要な項目を抽出し、必ず以下のJSONフォーマット（プレーンテキスト）のみを出力してください。マークダウン（```jsonなど）は不要です。
+
+                        【抽出ルール】
+                        - データが存在しない項目は空文字("")にしてください。
+                        - 年はすべて「西暦」で統一してください。
+                        - 学歴と職歴は同じリスト(history)にまとめ、学歴の先頭には {{"year":"", "month":"", "content":"学歴"}} を、職歴の先頭には {{"year":"", "month":"", "content":"職歴"}} となる見出し行を必ず挿入してください。
+                        - 資格も同様にリスト(licenses)にしてください。
+
+                        【求職者データ】
+                        {seeker_raw_data}
+
+                        【出力フォーマット】
+                        {{
+                          "furigana": "ふりがな",
+                          "name": "氏名",
+                          "gender": "男/女",
+                          "birth_age": "199X年X月X日生 (満XX歳)",
+                          "zip_code": "〒XXX-XXXX",
+                          "address_furigana": "じゅうしょふりがな",
+                          "address": "住所",
+                          "phone": "電話番号",
+                          "email": "メールアドレス",
+                          "history": [
+                             {{"year": "", "month": "", "content": "学歴"}},
+                             {{"year": "2015", "month": "4", "content": "〇〇高校 入学"}},
+                             {{"year": "2018", "month": "3", "content": "〇〇高校 卒業"}},
+                             {{"year": "", "month": "", "content": "職歴"}},
+                             {{"year": "2018", "month": "4", "content": "株式会社〇〇 入社"}}
+                          ],
+                          "licenses": [
+                             {{"year": "2020", "month": "10", "content": "TOEIC公開テスト 800点取得"}}
+                          ]
+                        }}
+                        """
+                        # AIにJSONを出力させる
+                        resp_json = client.models.generate_content(model='gemini-2.5-flash', contents=json_prompt)
+                        # JSON部分だけをクリーンに取り出す
+                        json_text = resp_json.text.replace('```json', '').replace('```', '').strip()
+                        data = json.loads(json_text)
+                        
+                        # 置き換え用辞書の作成
+                        replacements = {
+                            "{{ふりがな}}": data.get("furigana", ""),
+                            "{{氏名}}": data.get("name", ""),
+                            "{{性別}}": data.get("gender", ""),
+                            "{{生年月日_年齢}}": data.get("birth_age", ""),
+                            "{{郵便番号}}": data.get("zip_code", ""),
+                            "{{住所ふりがな}}": data.get("address_furigana", ""),
+                            "{{住所}}": data.get("address", ""),
+                            "{{電話番号}}": data.get("phone", ""),
+                            "{{Email}}": data.get("email", ""),
+                            "{{志望動機}}": st.session_state.phase2_motive,
+                        }
+
+                        # 学歴・職歴の流し込み（最大30行まで対応。余ったタグは空白化）
+                        history = data.get("history", [])
+                        for i in range(1, 31):
+                            if i <= len(history):
+                                replacements[f"{{{{歴年{i}}}}}"] = history[i-1].get("year", "")
+                                replacements[f"{{{{歴月{i}}}}}"] = history[i-1].get("month", "")
+                                replacements[f"{{{{歴内容{i}}}}}"] = history[i-1].get("content", "")
+                            else:
+                                replacements[f"{{{{歴年{i}}}}}"] = ""
+                                replacements[f"{{{{歴月{i}}}}}"] = ""
+                                replacements[f"{{{{歴内容{i}}}}}"] = ""
+
+                        # 資格の流し込み（最大10行まで対応。余ったタグは空白化）
+                        licenses = data.get("licenses", [])
+                        for i in range(1, 11):
+                            if i <= len(licenses):
+                                replacements[f"{{{{資格年{i}}}}}"] = licenses[i-1].get("year", "")
+                                replacements[f"{{{{資格月{i}}}}}"] = licenses[i-1].get("month", "")
+                                replacements[f"{{{{資格内容{i}}}}}"] = licenses[i-1].get("content", "")
+                            else:
+                                replacements[f"{{{{資格年{i}}}}}"] = ""
+                                replacements[f"{{{{資格月{i}}}}}"] = ""
+                                replacements[f"{{{{資格内容{i}}}}}"] = ""
+
+                        # 先ほど作った関数でExcelを書き換え
+                        new_excel_data = fill_excel_template(u_excel_template, replacements)
+                        
+                        st.success("✨ データの抽出とExcelへの流し込みが完了しました！")
+                        safe_seeker_name = st.session_state.p0_seeker if st.session_state.get("p0_seeker") else "求職者"
+                        st.download_button(
+                            label="📥 完成したExcel履歴書をダウンロード",
+                            data=new_excel_data,
+                            file_name=f"完成版_履歴書_{safe_seeker_name}_{time.strftime('%Y%m%d')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            type="primary"
+                        )
+                        
+                    except json.JSONDecodeError:
+                        st.error("AIからのデータ抽出に失敗しました。もう一度ボタンを押してお試しください。")
+                    except Exception as e:
+                        st.error(f"エラーが発生しました: {e}")
 
         # --- AIチャット機能 ---
         st.divider()
@@ -1069,6 +1149,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
