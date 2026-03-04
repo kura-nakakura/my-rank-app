@@ -75,11 +75,15 @@ header { background-color: transparent !important; }
 [data-testid="stSidebar"] {
     background-color: rgba(5, 15, 30, 0.85) !important; backdrop-filter: blur(10px);
 }
-[data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] h1, 
-[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] label {
+/* ラベルやキャプション（説明文）はサイバーブルーのまま */
+[data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] label {
     color: #00E5FF !important; text-shadow: none !important;
 }
-
+/* 指定された「AI AGENT MENU」と「履歴タイトル」を白色に変更 */
+[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+    color: #FFFFFF !important;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3) !important; /* 少しだけ発光させて高級感を出す */
+}
 /* 4. コンテナ */
 .block-container { position: relative; z-index: 1; }
 
@@ -1212,6 +1216,7 @@ elif app_mode == "4. 書類審査":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
