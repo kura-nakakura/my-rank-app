@@ -374,10 +374,10 @@ st.sidebar.title("AI AGENT MENU")
 app_mode = st.radio(
     "フェーズ選択",
     [
-        "1. 応募時 (ランク判定)", 
-        "2. 面談時 (カルテ作成)", 
-        "3. 面談後 (詳細分析/書類作成)", 
-        "4. 書類作成後 (マッチ審査/推薦文)"
+        "1. ランク判定", 
+        "2. カルテ作成", 
+        "3. 書類作成＆分析", 
+        "4. マッチ審査＆推薦文作成"
     ],
     horizontal=True,
     label_visibility="collapsed"
@@ -1212,6 +1212,7 @@ elif app_mode == "4. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
