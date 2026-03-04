@@ -35,73 +35,102 @@ AGENT_LIST = list(AGENT_SHEETS.keys())
 # ==========================================
 st.set_page_config(page_title="AIエージェントシステム PRO", page_icon="🤖", layout="wide")
 
+# ★デザインを image_2.png のHUD風に刷新
 st.markdown("""
 <style>
+/* 1. 背景の設定: image_2.png の雰囲気を再現 */
 .stApp {
-    background-color: #0A192F;
-    background-image: linear-gradient(rgba(10, 25, 47, 0.9), rgba(10, 25, 47, 0.9)),
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300e5ff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    background-color: #F0F4F8; /* クリーンなライトグレー */
+    background-image: 
+        radial-gradient(#00E5FF 1px, transparent 1px), /* かすかなドットパターン */
+        url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2300E5FF' fill-opacity='0.03'%3E%3Crect x='0' y='0' width='1' height='100'/%3E%3Crect x='0' y='0' width='100' height='1'/%3E%3C/g%3E%3C/svg%3E"); /* かすかなHUD風のライン */
+    background-size: 50px 50px, 100px 100px;
 }
 
-@keyframes move-bg {
-    0% { background_position: 0 0; }
-    100% { background_position: 1000px 1000px; }
+/* 2. 背景アニメーション（image_2.pngの光の効果を再現） */
+@keyframes glow-pulse {
+    0% { filter: drop-shadow(0 0 5px rgba(0, 229, 255, 0.3)); }
+    50% { filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.5)); }
+    100% { filter: drop-shadow(0 0 5px rgba(0, 229, 255, 0.3)); }
 }
-.stApp::before {
-    content: "";
-    position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    background-image: radial-gradient(#00E5FF 1.5px, transparent 1.5px);
-    background-size: 50px 50px;
-    opacity: 0.15;
-    animation: move-bg 30s linear infinite;
-    pointer-events: none;
-    z-index: 0;
-}
+
+/* 3. コンテナとブロックの設定 */
 .block-container {
     position: relative;
     z-index: 1;
 }
 
-.cyber-panel {
-    background: rgba(23, 42, 70, 0.7);
-    border: 1px solid #00E5FF;
-    box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
-    border-radius: 10px; padding: 25px; margin-top: 20px;
-    position: relative; overflow: hidden;
-}
-
-.scan-line {
-    position: absolute; top: -100%; left: -100%; width: 300%; height: 300%;
-    background: linear-gradient(to bottom, transparent, rgba(0, 229, 255, 0.4) 50%, transparent);
-    transform: rotate(45deg); animation: scan 2.5s ease-in-out forwards; pointer-events: none;
-}
-@keyframes scan { 0% { top: -150%; } 100% { top: 150%; } }
-
-.fb-box {
-    background: rgba(255, 255, 255, 0.05);
-    border-left: 4px solid #00E5FF;
-    padding: 15px; margin-top: 10px;
-}
-
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.emerald-box) {
-    background: linear-gradient(135deg, rgba(0, 229, 255, 0.05) 0%, rgba(0, 255, 153, 0.15) 50%, rgba(0, 229, 255, 0.05) 100%) !important;
-    border: 1px solid rgba(0, 255, 153, 0.5) !important;
-    box-shadow: 0 0 20px rgba(0, 255, 153, 0.2) !important;
+/* 4. 各パネルのデザイン: ガラスモーフィズムとHUD風エフェクト */
+.cyber-panel, [data-testid="stVerticalBlockBorderWrapper"] {
+    background: rgba(255, 255, 255, 0.6) !important; /* すりガラス風の白 */
+    backdrop-filter: blur(10px); /* ぼかし効果 */
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 229, 255, 0.2) !important; /* 薄いブルーの境界線 */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
     border-radius: 12px !important;
+    padding: 25px;
+    margin-top: 20px;
+    position: relative;
+    overflow: hidden;
+    animation: glow-pulse 4s ease-in-out infinite; /* かすかな光の脈動 */
 }
 
-[data-testid="stVerticalBlockBorderWrapper"] {
-    background: linear-gradient(135deg, rgba(0, 229, 255, 0.02) 0%, rgba(0, 255, 153, 0.08) 50%, rgba(0, 229, 255, 0.02) 100%);
-    border: 1px solid rgba(0, 255, 153, 0.3);
+/* 5. HUD風の装飾（パネルの角） */
+.cyber-panel::before {
+    content: "";
+    position: absolute;
+    top: -10px; left: -10px; width: 30px; height: 30px;
+    border-top: 2px solid rgba(0, 229, 255, 0.5);
+    border-left: 2px solid rgba(0, 229, 255, 0.5);
+}
+.cyber-panel::after {
+    content: "";
+    position: absolute;
+    bottom: -10px; right: -10px; width: 30px; height: 30px;
+    border-bottom: 2px solid rgba(0, 229, 255, 0.5);
+    border-right: 2px solid rgba(0, 229, 255, 0.5);
 }
 
+/* 6. フィードバックボックスの設定 */
+.fb-box {
+    background: rgba(0, 0, 0, 0.02) !important; /* 超薄いグレー */
+    border-left: 4px solid #00E5FF !important; /* 薄いブルーのアクセント */
+    padding: 15px;
+    margin-top: 10px;
+    border-radius: 4px;
+}
+
+/* 7. エメラルドボックス（Phase 0）の設定: image_2.pngの色合いに最適化 */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.emerald-box) {
+    background: rgba(255, 255, 255, 0.7) !important;
+    border: 1px solid rgba(0, 229, 255, 0.3) !important;
+    box-shadow: 0 4px 20px rgba(0, 229, 255, 0.1) !important;
+}
+
+/* 8. テキストの色（視認性向上） */
 label p, .stTextInput label, .stNumberInput label, .stTextArea label, .stRadio label, .stSelectbox label { 
-    color: #FFFFFF !important; 
+    color: #1A365D !important; /* 深いブルー */
     font-weight: bold !important; 
-    font-size: 1rem !important;
+    font-size: 0.9rem !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* モダンなフォント */
 }
-[data-testid="stMetricValue"] { color: #00E5FF !important; }
+
+/* 9. メトリックの値の色 */
+[data-testid="stMetricValue"] {
+    color: #00E5FF !important; /* image_2.pngの薄いブルー */
+    font-weight: bold;
+    font-size: 2.5rem !important;
+}
+
+/* 10. ボタンとチェックボックスのアクセントカラー */
+.stButton>button, .stCheckbox>label>span {
+    border-radius: 8px !important;
+}
+.stButton>button[kind="primary"] {
+    background-color: #00E5FF !important; /* image_2.pngの薄いブルー */
+    color: white !important;
+    border: none !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1149,6 +1178,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
