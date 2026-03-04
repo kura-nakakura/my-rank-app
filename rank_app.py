@@ -147,14 +147,15 @@ div[role="radiogroup"] > label:hover {
     border: 1px solid rgba(0, 229, 255, 0.5) !important; transform: translateY(-2px);
 }
 /* ラジオの丸いアイコンを消してタブ化する */
-div[role="radiogroup"] > label[data-baseweb="radio"] div:first-child { display: none !important; }
+div[role="radiogroup"] > label > div:first-child { display: none !important; }
 div[role="radiogroup"] > label[aria-checked="true"], div[role="radiogroup"] > label[data-checked="true"] {
     background: linear-gradient(135deg, rgba(0, 229, 255, 0.6) 0%, rgba(0, 119, 255, 0.6) 100%) !important;
     border: 1px solid #00E5FF !important; box-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
 }
-div[role="radiogroup"] > label p {
+/* ★テキストを強制的に白く表示させる */
+div[role="radiogroup"] p, div[role="radiogroup"] span, div[role="radiogroup"] div {
     color: #FFFFFF !important; font-weight: bold !important; margin: 0 !important;
-    font-size: 1rem !important; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    font-size: 0.95rem !important; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 </style>
 """, unsafe_allow_html=True)
@@ -1211,6 +1212,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
