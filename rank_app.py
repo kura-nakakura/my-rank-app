@@ -396,68 +396,68 @@ else:
         with st.sidebar.expander(f"👤 {log['time']} ({log['name']}様)"):
             if st.button("🔄 復元", key=f"c_res_{i}"):
                 # ★追加：履歴復元時に面談日も呼び出す
-                    st.session_state.p0_interview_date = log["data"].get("面談日", "不明")
-                    st.session_state.p0_agent = log["data"]["エージェント名"]
-                    st.session_state.p0_seeker = log["data"]["求職者名"]
-                    st.session_state.p0_recog = log["data"]["エージェント面談の認識"]
-                    st.session_state.p0_exp = log["data"]["エージェントの利用経験"]
-                    st.session_state.p0_age = log["data"]["生年月日・年齢"]
-                    st.session_state.p0_cert = log["data"]["保有資格"]
-                    st.session_state.p0_status = log["data"]["現在の勤務状況"]
-                    st.session_state.p0_history = log["data"]["職務経歴"]
-                    st.session_state.p0_reason1 = log["data"]["転職を考えたきっかけ"]
-                    st.session_state.p0_reason2 = log["data"]["今回の転職で叶えたいこと"]
-                    st.session_state.p0_reason3 = log["data"]["今後のビジョン"]
-                    st.session_state.p0_str = log["data"]["自分の強み"]
-                    st.session_state.p0_str_ep = log["data"]["強みエピソード"]
-                    st.session_state.p0_weak = log["data"]["弱み"]
-                    st.session_state.p0_weak_ep = log["data"]["弱みエピソード"]
-                    st.session_state.p0_c_job = log["data"]["希望職種・業務"]
-                    st.session_state.p0_c_loc = log["data"]["希望勤務地"]
-                    st.session_state.p0_c_cur_sal = log["data"]["現在年収・給与"]
-                    st.session_state.p0_c_req_sal = log["data"]["希望年収・給与"]
-                    st.session_state.p0_c_time = log["data"]["勤務時間・休日"]
-                    st.session_state.p0_c_vibes = log["data"]["社風・雰囲気"]
-                    st.session_state.p0_c_date = log["data"]["入社希望日"]
-                    st.session_state.p0_o_ans = log["data"]["確認事項や不安ごと"]
-                    st.session_state.p0_o_ndate = log["data"]["次回面談日"]
-                    st.session_state.p0_o_ntime = log["data"]["次回面談時間"]
-                    st.session_state.p0_generated = True
-                    st.rerun()
+                st.session_state.p0_interview_date = log["data"].get("面談日", "不明")
+                st.session_state.p0_agent = log["data"].get("エージェント名", "")
+                st.session_state.p0_seeker = log["data"].get("求職者名", "")
+                st.session_state.p0_recog = log["data"].get("エージェント面談の認識", "")
+                st.session_state.p0_exp = log["data"].get("エージェントの利用経験", "")
+                st.session_state.p0_age = log["data"].get("生年月日・年齢", "")
+                st.session_state.p0_cert = log["data"].get("保有資格", "")
+                st.session_state.p0_status = log["data"].get("現在の勤務状況", "")
+                st.session_state.p0_history = log["data"].get("職務経歴", "")
+                st.session_state.p0_reason1 = log["data"].get("転職を考えたきっかけ", "")
+                st.session_state.p0_reason2 = log["data"].get("今回の転職で叶えたいこと", "")
+                st.session_state.p0_reason3 = log["data"].get("今後のビジョン", "")
+                st.session_state.p0_str = log["data"].get("自分の強み", "")
+                st.session_state.p0_str_ep = log["data"].get("強みエピソード", "")
+                st.session_state.p0_weak = log["data"].get("弱み", "")
+                st.session_state.p0_weak_ep = log["data"].get("弱みエピソード", "")
+                st.session_state.p0_c_job = log["data"].get("希望職種・業務", "")
+                st.session_state.p0_c_loc = log["data"].get("希望勤務地", "")
+                st.session_state.p0_c_cur_sal = log["data"].get("現在年収・給与", "")
+                st.session_state.p0_c_req_sal = log["data"].get("希望年収・給与", "")
+                st.session_state.p0_c_time = log["data"].get("勤務時間・休日", "")
+                st.session_state.p0_c_vibes = log["data"].get("社風・雰囲気", "")
+                st.session_state.p0_c_date = log["data"].get("入社希望日", "")
+                st.session_state.p0_o_ans = log["data"].get("確認事項や不安ごと", "")
+                st.session_state.p0_o_ndate = log["data"].get("次回面談日", "")
+                st.session_state.p0_o_ntime = log["data"].get("次回面談時間", "")
+                st.session_state.p0_generated = True
+                st.rerun()
                 
-                dl_doc_c = create_carte_docx(log["data"])
-                st.download_button(
-                    label="📥 WordをDL",
-                    data=dl_doc_c,
-                    file_name=f"履歴_面談カルテ_{log['name']}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    key=f"hist_dl_c_{i}"
-                )
+            dl_doc_c = create_carte_docx(log["data"])
+            st.download_button(
+                label="📥 WordをDL",
+                data=dl_doc_c,
+                file_name=f"履歴_面談カルテ_{log['name']}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                key=f"hist_dl_c_{i}"
+            )
 
-    st.divider()
-    st.subheader("📄 書類生成履歴 (最新20件)")
-    if not st.session_state.history_log:
-        st.caption("書類履歴はありません")
-    else:
-        for i, log in enumerate(st.session_state.history_log):
-            with st.expander(f"📁 {log['time']} ({log['job']})"):
-                if st.button("🔄 この画面を復元する", key=f"restore_btn_{i}"):
-                    st.session_state.phase2_score = log["score"]
-                    st.session_state.phase2_advice = log["advice"]
-                    st.session_state.phase2_combined = log["combined"]
-                    st.session_state.phase2_motive = log["motive"]
-                    st.session_state.chat_messages = log["chat"]
-                    st.session_state.phase2_generated = True
-                    st.rerun()
+st.sidebar.divider()
+st.sidebar.subheader("📄 書類生成履歴 (最新20件)")
+if not st.session_state.history_log:
+    st.sidebar.caption("書類履歴はありません")
+else:
+    for i, log in enumerate(st.session_state.history_log):
+        with st.sidebar.expander(f"📁 {log['time']} ({log['job']})"):
+            if st.button("🔄 この画面を復元する", key=f"restore_btn_{i}"):
+                st.session_state.phase2_score = log["score"]
+                st.session_state.phase2_advice = log["advice"]
+                st.session_state.phase2_combined = log["combined"]
+                st.session_state.phase2_motive = log.get("motive", "")
+                st.session_state.chat_messages = log["chat"]
+                st.session_state.phase2_generated = True
+                st.rerun()
                 
-                dl_doc = create_docx(log["combined"])
-                st.download_button(
-                    label="📥 WordをDL",
-                    data=dl_doc,
-                    file_name=f"履歴_職務経歴書_{i}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    key=f"hist_dl_{i}"
-                )
+            dl_doc = create_docx(log["combined"])
+            st.download_button(
+                label="📥 WordをDL",
+                data=dl_doc,
+                file_name=f"履歴_職務経歴書_{i}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                key=f"hist_dl_{i}"
+            )
 
 # ==========================================
 # Phase 0: 初回面談 (カルテ作成)
@@ -1211,6 +1211,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
