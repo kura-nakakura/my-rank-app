@@ -44,7 +44,7 @@ def get_base64_image(image_path):
         return "" # 画像が見つからない場合は空を返す
 
 # 背景画像のファイル名（同じフォルダに置いてある想定です）
-bg_base64 = get_base64_image("IMG_8635.jpg")
+bg_base64 = get_base64_image("IMG_8640.jpg")
 
 st.set_page_config(page_title="AIエージェントシステム PRO", page_icon="🤖", layout="wide")
 
@@ -1208,6 +1208,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
