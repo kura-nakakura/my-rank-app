@@ -45,7 +45,7 @@ def get_base64_video(video_path):
 
 st.set_page_config(page_title="AIエージェントシステム PRO", page_icon="🤖", layout="wide")
 
-# ★変更：切り替え処理をなくし、常にメインのサイバー動画を読み込むようにシンプル化
+# 常にメインのサイバー動画を読み込む
 video_base64 = get_base64_video("ScreenRecording_03-04-2026 13-38-53_1.mov")
 
 # 動画が見つかった場合、全画面の背景としてループ再生させるHTMLを挿入
@@ -60,112 +60,101 @@ if video_base64:
 # ダーク・ネオサイバー仕様のCSS
 st.markdown("""
 <style>
-/* 1. 背景の設定: Streamlitの元々の背景を透明にし、裏の動画を見せる */
-.stApp {
-    background-color: transparent !important; 
-    background-image: none !important;
-}
-header {
-    background-color: transparent !important;
-}
+/* 1. 背景の設定 */
+.stApp { background-color: transparent !important; background-image: none !important; }
+header { background-color: transparent !important; }
 
-/* 2. メイン画面の文字色: ダークな動画に合わせて白ベースに */
+/* 2. メイン画面の文字色 */
 .main .block-container h1, .main .block-container h2, .main .block-container h3, 
 .main .block-container h4, .main .block-container p, .main .block-container span, 
 .main .block-container div {
-    color: #FFFFFF !important;
-    text-shadow: 0px 2px 4px rgba(0,0,0,0.8); /* 動画の上でも文字が読めるように影をつける */
+    color: #FFFFFF !important; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);
 }
 
-/* 3. サイドバー: より深く、透過させる */
+/* 3. サイドバー */
 [data-testid="stSidebar"] {
-    background-color: rgba(5, 15, 30, 0.85) !important;
-    backdrop-filter: blur(10px);
+    background-color: rgba(5, 15, 30, 0.85) !important; backdrop-filter: blur(10px);
 }
 [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] h1, 
 [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] label {
-    color: #00E5FF !important; /* サイドバーの文字はサイバーブルー */
-    text-shadow: none !important;
+    color: #00E5FF !important; text-shadow: none !important;
 }
 
-/* 4. コンテナとブロックの設定 */
-.block-container {
-    position: relative;
-    z-index: 1;
-}
+/* 4. コンテナ */
+.block-container { position: relative; z-index: 1; }
 
-/* 5. 各パネルのデザイン: ダークグラスモーフィズム（黒いすりガラス） */
+/* 5. ダークグラスモーフィズムパネル */
 .cyber-panel, [data-testid="stVerticalBlockBorderWrapper"] {
-    background: rgba(10, 20, 40, 0.6) !important; 
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(0, 229, 255, 0.3) !important; 
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
-    border-radius: 12px !important;
-    padding: 25px;
-    margin-top: 20px;
-    position: relative;
-    overflow: hidden;
+    background: rgba(10, 20, 40, 0.6) !important; backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(0, 229, 255, 0.3) !important; 
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important; border-radius: 12px !important;
+    padding: 25px; margin-top: 20px; position: relative; overflow: hidden;
 }
 
-/* 6. HUD風の装飾（パネルの角のアクセント） */
+/* 6. HUD装飾 */
 .cyber-panel::before, [data-testid="stVerticalBlockBorderWrapper"]::before {
     content: ""; position: absolute; top: 0; left: 0; width: 25px; height: 25px;
-    border-top: 3px solid #00E5FF; border-left: 3px solid #00E5FF;
-    border-top-left-radius: 12px;
+    border-top: 3px solid #00E5FF; border-left: 3px solid #00E5FF; border-top-left-radius: 12px;
 }
 .cyber-panel::after, [data-testid="stVerticalBlockBorderWrapper"]::after {
     content: ""; position: absolute; bottom: 0; right: 0; width: 25px; height: 25px;
-    border-bottom: 3px solid #00E5FF; border-right: 3px solid #00E5FF;
-    border-bottom-right-radius: 12px;
+    border-bottom: 3px solid #00E5FF; border-right: 3px solid #00E5FF; border-bottom-right-radius: 12px;
 }
 
-/* 7. フィードバックボックスの設定 */
+/* 7. フィードバックボックス */
 .fb-box {
-    background: rgba(0, 229, 255, 0.1) !important; 
-    border-left: 4px solid #00E5FF !important; 
-    padding: 15px;
-    margin-top: 10px;
-    border-radius: 6px;
+    background: rgba(0, 229, 255, 0.1) !important; border-left: 4px solid #00E5FF !important; 
+    padding: 15px; margin-top: 10px; border-radius: 6px;
 }
 
-/* 8. 入力フォーム（テキストボックス等）の背景と文字色 */
+/* 8. 入力フォーム */
 .stTextInput input, .stTextArea textarea, .stNumberInput input {
-    background-color: rgba(0, 0, 0, 0.5) !important;
-    color: #FFFFFF !important;
-    border: 1px solid rgba(0, 229, 255, 0.4) !important;
-    border-radius: 6px !important;
+    background-color: rgba(0, 0, 0, 0.5) !important; color: #FFFFFF !important;
+    border: 1px solid rgba(0, 229, 255, 0.4) !important; border-radius: 6px !important;
 }
+::placeholder { color: #8899A6 !important; opacity: 1 !important; }
 
-/* テキストエリアのプレースホルダー（薄い文字）の色 */
-::placeholder {
-    color: #8899A6 !important;
-    opacity: 1 !important;
-}
-
-/* 9. メトリック（数字）の値の色 */
+/* 9. メトリック */
 [data-testid="stMetricValue"] {
-    color: #00E5FF !important; 
-    font-weight: bold;
-    font-size: 2.5rem !important;
-    text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+    color: #00E5FF !important; font-weight: bold; font-size: 2.5rem !important; text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
 }
 
-/* 10. ボタンの設定 */
-.stButton>button {
-    border-radius: 8px !important;
-    font-weight: bold !important;
-    transition: all 0.3s ease;
-}
+/* 10. ボタン */
+.stButton>button { border-radius: 8px !important; font-weight: bold !important; transition: all 0.3s ease; }
 .stButton>button[kind="primary"] {
-    background: linear-gradient(135deg, #00E5FF 0%, #0077FF 100%) !important;
-    color: white !important;
-    border: none !important;
-    box-shadow: 0 4px 10px rgba(0, 229, 255, 0.4) !important;
+    background: linear-gradient(135deg, #00E5FF 0%, #0077FF 100%) !important; color: white !important;
+    border: none !important; box-shadow: 0 4px 10px rgba(0, 229, 255, 0.4) !important;
 }
 .stButton>button[kind="primary"]:hover {
-    box-shadow: 0 6px 15px rgba(0, 229, 255, 0.7) !important;
-    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 229, 255, 0.7) !important; transform: translateY(-2px);
+}
+
+/* ★追加 11. ラジオボタンを「サイバーな横タブ」に進化させる魔法のCSS */
+div[role="radiogroup"] {
+    display: flex; flex-direction: row; justify-content: space-between;
+    background: rgba(10, 20, 40, 0.6) !important; padding: 8px; border-radius: 12px;
+    border: 1px solid rgba(0, 229, 255, 0.3); box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+}
+div[role="radiogroup"] > label {
+    flex: 1; text-align: center; background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid transparent !important; border-radius: 8px !important;
+    padding: 12px 10px !important; cursor: pointer; transition: all 0.3s ease;
+    display: flex; justify-content: center; align-items: center; min-width: 150px;
+}
+div[role="radiogroup"] > label:hover {
+    background: rgba(0, 229, 255, 0.15) !important;
+    border: 1px solid rgba(0, 229, 255, 0.5) !important; transform: translateY(-2px);
+}
+/* ラジオの丸いアイコンを消してタブ化する */
+div[role="radiogroup"] > label[data-baseweb="radio"] div:first-child { display: none !important; }
+div[role="radiogroup"] > label[aria-checked="true"], div[role="radiogroup"] > label[data-checked="true"] {
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.6) 0%, rgba(0, 119, 255, 0.6) 100%) !important;
+    border: 1px solid #00E5FF !important; box-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
+}
+div[role="radiogroup"] > label p {
+    color: #FFFFFF !important; font-weight: bold !important; margin: 0 !important;
+    font-size: 1rem !important; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 </style>
 """, unsafe_allow_html=True)
@@ -376,18 +365,26 @@ def export_to_spreadsheet(agent_name, seeker_name, interview_date, additional_da
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 # ==========================================
-# 🎛️ サイドバー
+# 画面レイアウト・サイドバー
 # ==========================================
-with st.sidebar:
-    st.title("AI AGENT MENU")
-    app_mode = st.radio("フェーズ選択", [
-        "0. 初回面談 (カルテ作成)",
+st.sidebar.title("AI AGENT MENU")
+
+# ★追加：メイン画面の最上部にタブ風のフェーズ選択を配置（順番も変更！）
+app_mode = st.radio(
+    "フェーズ選択",
+    [
         "1. 応募時 (ランク判定)", 
-        "2. 初回面談後 (詳細分析/書類作成)", 
-        "3. 書類作成後 (マッチ審査/推薦文)"
-    ])
-    st.divider()
-    my_name = st.text_input("アドバイザー名", placeholder="山田 太郎")
+        "2. 面談時 (カルテ作成)", 
+        "3. 面談後 (詳細分析/書類作成)", 
+        "4. 書類作成後 (マッチ審査/推薦文)"
+    ],
+    horizontal=True,
+    label_visibility="collapsed"
+)
+st.markdown("<br>", unsafe_allow_html=True)
+
+st.sidebar.markdown("---")
+agent_name = st.sidebar.text_input("アドバイザー名",placeholder="山田 太郎")
     
     st.divider()
     st.subheader("📋 面談カルテ履歴 (最新20件)")
@@ -1213,6 +1210,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
