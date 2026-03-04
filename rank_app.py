@@ -35,7 +35,7 @@ AGENT_LIST = list(AGENT_SHEETS.keys())
 # ==========================================
 import base64
 
-# ★変更：動画を読み込んでBase64形式に変換する関数
+# 動画を読み込んでBase64形式に変換する関数
 def get_base64_video(video_path):
     try:
         with open(video_path, "rb") as video_file:
@@ -45,8 +45,17 @@ def get_base64_video(video_path):
 
 st.set_page_config(page_title="AIエージェントシステム PRO", page_icon="🤖", layout="wide")
 
-# ★動画のファイル名（アップロードした名前に完全一致させます）
-video_base64 = get_base64_video("ScreenRecording_03-04-2026 13-38-53_1.mov")
+# ★追加：ログイン状態をここで先に確認するための準備
+if "password_correct" not in st.session_state:
+    st.session_state.password_correct = False
+
+# ★変更：ログイン前と後で、読み込む動画ファイルを切り替える
+if not st.session_state.password_correct:
+    # 🔒 ログイン画面用の動画（※アップロードした新しい動画のファイル名に書き換えてください！）
+    video_base64 = get_base64_video("login_bg.mov") 
+else:
+    # 🌐 メイン画面用の動画（現在のサイバー動画）
+    video_base64 = get_base64_video("ScreenRecording_03-04-2026 13-38-53_1.mov")
 
 # 動画が見つかった場合、全画面の背景としてループ再生させるHTMLを挿入
 if video_base64:
@@ -57,7 +66,7 @@ if video_base64:
     """
     st.markdown(video_html, unsafe_allow_html=True)
 
-# ★ダーク・ネオサイバー仕様のCSS
+# ダーク・ネオサイバー仕様のCSS
 st.markdown("""
 <style>
 /* 1. 背景の設定: Streamlitの元々の背景を透明にし、裏の動画を見せる */
@@ -1213,6 +1222,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
