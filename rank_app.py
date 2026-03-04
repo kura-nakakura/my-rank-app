@@ -33,104 +33,134 @@ AGENT_LIST = list(AGENT_SHEETS.keys())
 # ==========================================
 # 🎨 デザイン定義
 # ==========================================
+import base64
+
+# ★追加：画像を読み込んでCSSで使える形式(Base64)に変換する関数
+def get_base64_image(image_path):
+    try:
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    except Exception as e:
+        return "" # 画像が見つからない場合は空を返す
+
+# 背景画像のファイル名（同じフォルダに置いてある想定です）
+bg_base64 = get_base64_image("IMG_8635.jpg")
+
 st.set_page_config(page_title="AIエージェントシステム PRO", page_icon="🤖", layout="wide")
 
-# ★デザインを image_2.png のHUD風に刷新
-st.markdown("""
+# 画像が見つかった場合はその画像を、見つからなかった場合は予備のライトグレーを設定
+if bg_base64:
+    bg_css = f"""
+    background-image: url("data:image/jpeg;base64,{bg_base64}");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    """
+else:
+    bg_css = "background-color: #F0F4F8;"
+
+st.markdown(f"""
 <style>
-/* 1. 背景の設定: image_2.png の雰囲気を再現 */
-.stApp {
-    background-color: #F0F4F8; /* クリーンなライトグレー */
-    background-image: 
-        radial-gradient(#00E5FF 1px, transparent 1px), /* かすかなドットパターン */
-        url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2300E5FF' fill-opacity='0.03'%3E%3Crect x='0' y='0' width='1' height='100'/%3E%3Crect x='0' y='0' width='100' height='1'/%3E%3C/g%3E%3C/svg%3E"); /* かすかなHUD風のライン */
-    background-size: 50px 50px, 100px 100px;
-}
+/* 1. 背景の設定（上のPythonコードで生成した画像を適用） */
+.stApp {{
+    {bg_css}
+}}
 
-/* 2. 背景アニメーション（image_2.pngの光の効果を再現） */
-@keyframes glow-pulse {
-    0% { filter: drop-shadow(0 0 5px rgba(0, 229, 255, 0.3)); }
-    50% { filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.5)); }
-    100% { filter: drop-shadow(0 0 5px rgba(0, 229, 255, 0.3)); }
-}
+/* 2. メイン画面の文字色を深いブルーにして「白飛び」を防止 */
+.main .block-container h1, .main .block-container h2, .main .block-container h3, 
+.main .block-container h4, .main .block-container p, .main .block-container span, 
+.main .block-container div {{
+    color: #1A365D !important;
+}}
 
-/* 3. コンテナとブロックの設定 */
-.block-container {
+/* 3. サイドバーはダークなままで文字を白く保つ */
+[data-testid="stSidebar"] {{
+    background-color: rgba(10, 25, 47, 0.95) !important;
+}}
+[data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] h1, 
+[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] label {{
+    color: #FFFFFF !important;
+}}
+
+/* 4. コンテナとブロックの設定 */
+.block-container {{
     position: relative;
     z-index: 1;
-}
+}}
 
-/* 4. 各パネルのデザイン: ガラスモーフィズムとHUD風エフェクト */
-.cyber-panel, [data-testid="stVerticalBlockBorderWrapper"] {
-    background: rgba(255, 255, 255, 0.6) !important; /* すりガラス風の白 */
-    backdrop-filter: blur(10px); /* ぼかし効果 */
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(0, 229, 255, 0.2) !important; /* 薄いブルーの境界線 */
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
+/* 5. 各パネルのデザイン: すりガラス風（ガラスモーフィズム） */
+.cyber-panel, [data-testid="stVerticalBlockBorderWrapper"] {{
+    background: rgba(255, 255, 255, 0.85) !important; /* 背景画像が透けすぎないように白を強めに */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 229, 255, 0.4) !important; 
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15) !important;
     border-radius: 12px !important;
     padding: 25px;
     margin-top: 20px;
     position: relative;
     overflow: hidden;
-    animation: glow-pulse 4s ease-in-out infinite; /* かすかな光の脈動 */
-}
+}}
 
-/* 5. HUD風の装飾（パネルの角） */
-.cyber-panel::before {
-    content: "";
-    position: absolute;
-    top: -10px; left: -10px; width: 30px; height: 30px;
-    border-top: 2px solid rgba(0, 229, 255, 0.5);
-    border-left: 2px solid rgba(0, 229, 255, 0.5);
-}
-.cyber-panel::after {
-    content: "";
-    position: absolute;
-    bottom: -10px; right: -10px; width: 30px; height: 30px;
-    border-bottom: 2px solid rgba(0, 229, 255, 0.5);
-    border-right: 2px solid rgba(0, 229, 255, 0.5);
-}
+/* 6. HUD風の装飾（パネルの角のアクセント） */
+.cyber-panel::before, [data-testid="stVerticalBlockBorderWrapper"]::before {{
+    content: ""; position: absolute; top: 0; left: 0; width: 25px; height: 25px;
+    border-top: 3px solid #00E5FF; border-left: 3px solid #00E5FF;
+    border-top-left-radius: 12px;
+}}
+.cyber-panel::after, [data-testid="stVerticalBlockBorderWrapper"]::after {{
+    content: ""; position: absolute; bottom: 0; right: 0; width: 25px; height: 25px;
+    border-bottom: 3px solid #00E5FF; border-right: 3px solid #00E5FF;
+    border-bottom-right-radius: 12px;
+}}
 
-/* 6. フィードバックボックスの設定 */
-.fb-box {
-    background: rgba(0, 0, 0, 0.02) !important; /* 超薄いグレー */
-    border-left: 4px solid #00E5FF !important; /* 薄いブルーのアクセント */
+/* 7. フィードバックボックスの設定 */
+.fb-box {{
+    background: rgba(0, 229, 255, 0.05) !important; 
+    border-left: 4px solid #00E5FF !important; 
     padding: 15px;
     margin-top: 10px;
-    border-radius: 4px;
-}
+    border-radius: 6px;
+}}
 
-/* 7. エメラルドボックス（Phase 0）の設定: image_2.pngの色合いに最適化 */
-div[data-testid="stVerticalBlockBorderWrapper"]:has(.emerald-box) {
-    background: rgba(255, 255, 255, 0.7) !important;
-    border: 1px solid rgba(0, 229, 255, 0.3) !important;
-    box-shadow: 0 4px 20px rgba(0, 229, 255, 0.1) !important;
-}
+/* 8. 入力フォーム（テキストボックス等）の背景と文字色を明示的に指定 */
+.stTextInput input, .stTextArea textarea, .stNumberInput input {{
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    color: #1A365D !important;
+    border: 1px solid rgba(0, 229, 255, 0.5) !important;
+    border-radius: 6px !important;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05) !important;
+}}
 
-/* 8. テキストの色（視認性向上） */
-label p, .stTextInput label, .stNumberInput label, .stTextArea label, .stRadio label, .stSelectbox label { 
-    color: #1A365D !important; /* 深いブルー */
-    font-weight: bold !important; 
-    font-size: 0.9rem !important;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* モダンなフォント */
-}
+/* テキストエリアのプレースホルダー（薄い文字）の色 */
+::placeholder {{
+    color: #A0AEC0 !important;
+    opacity: 1 !important;
+}}
 
-/* 9. メトリックの値の色 */
-[data-testid="stMetricValue"] {
-    color: #00E5FF !important; /* image_2.pngの薄いブルー */
+/* 9. メトリック（数字）の値の色 */
+[data-testid="stMetricValue"] {{
+    color: #0077FF !important; 
     font-weight: bold;
     font-size: 2.5rem !important;
-}
+}}
 
-/* 10. ボタンとチェックボックスのアクセントカラー */
-.stButton>button, .stCheckbox>label>span {
+/* 10. ボタンの設定 */
+.stButton>button {{
     border-radius: 8px !important;
-}
-.stButton>button[kind="primary"] {
-    background-color: #00E5FF !important; /* image_2.pngの薄いブルー */
+    font-weight: bold !important;
+    transition: all 0.3s ease;
+}}
+.stButton>button[kind="primary"] {{
+    background: linear-gradient(135deg, #00E5FF 0%, #0077FF 100%) !important;
     color: white !important;
     border: none !important;
-}
+    box-shadow: 0 4px 10px rgba(0, 229, 255, 0.3) !important;
+}}
+.stButton>button[kind="primary"]:hover {{
+    box-shadow: 0 6px 15px rgba(0, 229, 255, 0.5) !important;
+    transform: translateY(-2px);
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1178,6 +1208,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
