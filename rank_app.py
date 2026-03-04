@@ -1115,7 +1115,7 @@ elif app_mode == "3. 書類作成":
 # Phase 3: マッチ審査
 # ==========================================
 elif app_mode == "4. 書類審査":
-    st.title("書類作成後: 書類審査＆推薦文作成＆面接対策")
+    st.title("書類作成後: 審査＆推薦文作成")
     m_mode = st.radio("分析モード", ["1. 簡易マッチング", "2. 詳細マッチング"], horizontal=True)
     
     if m_mode == "1. 簡易マッチング":
@@ -1216,6 +1216,7 @@ elif app_mode == "4. 書類審査":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
