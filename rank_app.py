@@ -384,17 +384,18 @@ app_mode = st.radio(
 st.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-agent_name = st.sidebar.text_input("アドバイザー名",placeholder="山田 太郎")
+agent_name = st.sidebar.text_input("アドバイザー名", placeholder="山田 太郎")
     
-st.divider()
-    st.subheader("📋 面談カルテ履歴 (最新20件)")
-    if not st.session_state.carte_log:
-        st.caption("カルテの履歴はありません")
-    else:
-        for i, log in enumerate(st.session_state.carte_log):
-            with st.expander(f"👤 {log['time']} ({log['name']}様)"):
-                if st.button("🔄 復元", key=f"c_res_{i}"):
-                    # ★追加：履歴復元時に面談日も呼び出す
+# ▼ ここから下を、すべて「一番左の壁」にピッタリ揃えました！ ▼
+st.sidebar.divider()
+st.sidebar.subheader("📋 面談カルテ履歴 (最新20件)")
+if not st.session_state.carte_log:
+    st.sidebar.caption("カルテの履歴はありません")
+else:
+    for i, log in enumerate(st.session_state.carte_log):
+        with st.sidebar.expander(f"👤 {log['time']} ({log['name']}様)"):
+            if st.button("🔄 復元", key=f"c_res_{i}"):
+                # ★追加：履歴復元時に面談日も呼び出す
                     st.session_state.p0_interview_date = log["data"].get("面談日", "不明")
                     st.session_state.p0_agent = log["data"]["エージェント名"]
                     st.session_state.p0_seeker = log["data"]["求職者名"]
@@ -1210,6 +1211,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
