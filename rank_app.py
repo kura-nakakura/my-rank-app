@@ -52,7 +52,7 @@ if "password_correct" not in st.session_state:
 # ログイン前と後で、読み込む動画ファイルを切り替える
 if not st.session_state.password_correct:
     # 🔒 ログイン画面用の動画
-    video_base64 = get_base64_video("login_bg.mov") 
+    video_base64 = get_base64_video("ScreenRecording_03-04-2026 13-57-00_1.mov") 
     video_id = "video-login" # ★追加：ブラウザに別動画だと認識させるID
 else:
     # 🌐 メイン画面用の動画（現在のサイバー動画）
@@ -1226,6 +1226,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
