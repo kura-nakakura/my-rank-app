@@ -386,7 +386,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 st.sidebar.markdown("---")
 agent_name = st.sidebar.text_input("アドバイザー名",placeholder="山田 太郎")
     
-    st.divider()
+st.divider()
     st.subheader("📋 面談カルテ履歴 (最新20件)")
     if not st.session_state.carte_log:
         st.caption("カルテの履歴はありません")
@@ -1210,6 +1210,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
