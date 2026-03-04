@@ -45,30 +45,15 @@ def get_base64_video(video_path):
 
 st.set_page_config(page_title="AIエージェントシステム PRO", page_icon="🤖", layout="wide")
 
-# ログイン状態をここで先に確認するための準備
-if "password_correct" not in st.session_state:
-    st.session_state.password_correct = False
-
-# ログイン前と後で、読み込む動画ファイルを切り替える
-if not st.session_state.password_correct:
-    # 🔒 ログイン画面用の動画
-    video_base64 = get_base64_video("ScreenRecording_03-04-2026 13-57-00_1.mov") 
-    video_id = "video-login" # ★追加：ブラウザに別動画だと認識させるID
-else:
-    # 🌐 メイン画面用の動画（現在のサイバー動画）
-    video_base64 = get_base64_video("ScreenRecording_03-04-2026 13-38-53_1.mov")
-    video_id = "video-main" # ★追加：ブラウザに別動画だと認識させるID
+# ★変更：切り替え処理をなくし、常にメインのサイバー動画を読み込むようにシンプル化
+video_base64 = get_base64_video("ScreenRecording_03-04-2026 13-38-53_1.mov")
 
 # 動画が見つかった場合、全画面の背景としてループ再生させるHTMLを挿入
 if video_base64:
-    # ★変更：IDを振り分け、強制的に動画を再読み込み(load)させるスクリプトを追加！
     video_html = f"""
-    <video id="{video_id}" autoplay loop muted playsinline style="position: fixed; right: 0; bottom: 0; min-width: 100%; min-height: 100%; z-index: -1; object-fit: cover; opacity: 0.8;">
+    <video autoplay loop muted playsinline style="position: fixed; right: 0; bottom: 0; min-width: 100%; min-height: 100%; z-index: -1; object-fit: cover; opacity: 0.8;">
         <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
     </video>
-    <script>
-        document.getElementById("{video_id}").load();
-    </script>
     """
     st.markdown(video_html, unsafe_allow_html=True)
 
@@ -89,7 +74,7 @@ header {
 .main .block-container h4, .main .block-container p, .main .block-container span, 
 .main .block-container div {
     color: #FFFFFF !important;
-    text-shadow: 0px 2px 4px rgba(0,0,0,0.8);
+    text-shadow: 0px 2px 4px rgba(0,0,0,0.8); /* 動画の上でも文字が読めるように影をつける */
 }
 
 /* 3. サイドバー: より深く、透過させる */
@@ -99,7 +84,7 @@ header {
 }
 [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] h1, 
 [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] label {
-    color: #00E5FF !important;
+    color: #00E5FF !important; /* サイドバーの文字はサイバーブルー */
     text-shadow: none !important;
 }
 
@@ -109,7 +94,7 @@ header {
     z-index: 1;
 }
 
-/* 5. 各パネルのデザイン: ダークグラスモーフィズム */
+/* 5. 各パネルのデザイン: ダークグラスモーフィズム（黒いすりガラス） */
 .cyber-panel, [data-testid="stVerticalBlockBorderWrapper"] {
     background: rgba(10, 20, 40, 0.6) !important; 
     backdrop-filter: blur(8px);
@@ -123,7 +108,7 @@ header {
     overflow: hidden;
 }
 
-/* 6. HUD風の装飾 */
+/* 6. HUD風の装飾（パネルの角のアクセント） */
 .cyber-panel::before, [data-testid="stVerticalBlockBorderWrapper"]::before {
     content: ""; position: absolute; top: 0; left: 0; width: 25px; height: 25px;
     border-top: 3px solid #00E5FF; border-left: 3px solid #00E5FF;
@@ -135,7 +120,7 @@ header {
     border-bottom-right-radius: 12px;
 }
 
-/* 7. フィードバックボックス */
+/* 7. フィードバックボックスの設定 */
 .fb-box {
     background: rgba(0, 229, 255, 0.1) !important; 
     border-left: 4px solid #00E5FF !important; 
@@ -144,19 +129,21 @@ header {
     border-radius: 6px;
 }
 
-/* 8. 入力フォーム */
+/* 8. 入力フォーム（テキストボックス等）の背景と文字色 */
 .stTextInput input, .stTextArea textarea, .stNumberInput input {
     background-color: rgba(0, 0, 0, 0.5) !important;
     color: #FFFFFF !important;
     border: 1px solid rgba(0, 229, 255, 0.4) !important;
     border-radius: 6px !important;
 }
+
+/* テキストエリアのプレースホルダー（薄い文字）の色 */
 ::placeholder {
     color: #8899A6 !important;
     opacity: 1 !important;
 }
 
-/* 9. メトリック（数字） */
+/* 9. メトリック（数字）の値の色 */
 [data-testid="stMetricValue"] {
     color: #00E5FF !important; 
     font-weight: bold;
@@ -1226,6 +1213,7 @@ elif app_mode == "3. 書類作成後 (マッチ審査/推薦文)":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
+
 
 
 
