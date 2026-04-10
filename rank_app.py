@@ -4,9 +4,6 @@ from google import genai
 import re
 from pypdf import PdfReader
 import time
-from docx import Document
-from docx.shared import Pt
-from docx.oxml.ns import qn
 from io import BytesIO
 import requests
 from bs4 import BeautifulSoup
@@ -16,6 +13,9 @@ from google.oauth2.service_account import Credentials
 import datetime
 # ★追加：Excelファイルを操作するためのライブラリ
 import openpyxl
+import json
+# ★追加：Google Docs APIを操作するためのライブラリ
+from googleapiclient.discovery import build
 
 # ==========================================
 # ⚙️ システム設定・マスタ管理（★追加）
@@ -186,6 +186,9 @@ if "p0_short_term" not in st.session_state:
     st.session_state.p0_short_term = ""
 if "p0_company" not in st.session_state:
     st.session_state.p0_company = ""
+# ★追加：APIキーのインデックス管理
+if "current_key_idx" not in st.session_state:
+    st.session_state.current_key_idx = 0
 
 # --- セキュリティ ---
 LOGIN_PASSWORD = "HR9237"
@@ -199,6 +202,80 @@ if not st.session_state.password_correct:
             st.rerun()
         else: st.error("コードが違います")
     st.stop()
+
+# ==========================================
+# 🛡️ 超堅牢なAPI通信システム（自動リトライ＆キー切替）
+# ==========================================
+def safe_generate_content(contents, model='gemini-2.5-flash'):
+    # Secretsからキーを取得（カンマ区切りで複数対応）
+    raw_keys = st.secrets.get("GEMINI_API_KEY", "")
+    api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
+    if not api_keys:
+        raise Exception("APIキーが設定されていません。")
+
+    if "current_key_idx" not in st.session_state:
+        st.session_state.current_key_idx = 0
+
+    max_retries = len(api_keys) * 2 # 各キー2回まで試行
+    wait_time = 15 # 429エラー時の基本待機時間（秒）
+
+    for attempt in range(max_retries):
+        current_key = api_keys[st.session_state.current_key_idx]
+        temp_client = genai.Client(api_key=current_key)
+        
+        try:
+            time.sleep(1) # 短時間のリクエスト集中を防ぐ
+            resp = temp_client.models.generate_content(model=model, contents=contents)
+            return resp
+            
+        except Exception as e:
+            err_msg = str(e)
+            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "503" in err_msg:
+                # 複数キーがあれば切り替え、なければ待機して再実行
+                if len(api_keys) > 1:
+                    st.session_state.current_key_idx = (st.session_state.current_key_idx + 1) % len(api_keys)
+                    st.toast(f"⚠️ 制限を検知。バックアップAPIキーに切り替えて自動再実行します...", icon="🔄")
+                else:
+                    st.toast(f"⚠️ 制限を検知。{wait_time}秒待機して自動再実行します...（{attempt+1}/{max_retries}回目）", icon="⏳")
+                    time.sleep(wait_time)
+                    wait_time += 10 # エクスポネンシャルバックオフ
+                continue
+            else:
+                raise e
+    raise Exception("システムが大変混雑しています。数分おいてから再度お試しください。")
+
+# ==========================================
+# 📄 Google Docs 完全自動生成機能
+# ==========================================
+def create_google_doc(title, text_content):
+    try:
+        credentials_dict = dict(st.secrets["gcp_service_account"])
+        # ドライブとドキュメント両方の権限を付与
+        scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/documents']
+        creds = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
+
+        docs_service = build('docs', 'v1', credentials=creds)
+        drive_service = build('drive', 'v3', credentials=creds)
+
+        # 1. ドキュメントを新規作成
+        doc = docs_service.documents().create(body={'title': title}).execute()
+        document_id = doc.get('documentId')
+
+        # 2. テキストを流し込む
+        requests = [{'insertText': {'location': {'index': 1}, 'text': text_content}}]
+        docs_service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+
+        # 3. 誰でもリンクを知っていれば閲覧できるように権限を変更
+        drive_service.permissions().create(
+            fileId=document_id,
+            body={'type': 'anyone', 'role': 'reader'},
+            fields='id'
+        ).execute()
+
+        doc_url = f"https://docs.google.com/document/d/{document_id}/edit"
+        return True, doc_url
+    except Exception as e:
+        return False, f"Google Docs作成エラー: {e}"
 
 # --- 関数群 ---
 def read_files(files):
@@ -231,33 +308,6 @@ def get_section(name, text):
     pattern = f"【{name}】(.*?)(?=【|$)"
     match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
     return match.group(1).strip() if match else f"{name}の情報が生成されませんでした。プロンプトを再確認してください。"
-
-def create_docx(history_text):
-    doc = Document()
-    style = doc.styles['Normal']
-    style.font.name = 'ＭＳ 明朝'
-    style.font._element.rPr.rFonts.set(qn('w:eastAsia'), 'ＭＳ 明朝')
-    
-    doc.add_heading('職務経歴書（自己PR含む）', 0)
-    for line in history_text.split('\n'):
-        doc.add_paragraph(line)
-    bio = BytesIO()
-    doc.save(bio)
-    return bio.getvalue()
-
-def create_carte_docx(carte_dict):
-    doc = Document()
-    style = doc.styles['Normal']
-    style.font.name = 'ＭＳ 明朝'
-    style.font._element.rPr.rFonts.set(qn('w:eastAsia'), 'ＭＳ 明朝')
-    
-    doc.add_heading('初回面談カルテ', 0)
-    for key, value in carte_dict.items():
-        doc.add_heading(f'■ {key}', level=2)
-        doc.add_paragraph(value)
-    bio = BytesIO()
-    doc.save(bio)
-    return bio.getvalue()
 
 # ==========================================
 # ★追加：Excelテンプレートの文字置き換え関数
@@ -367,7 +417,6 @@ def export_to_spreadsheet(agent_name, seeker_name, interview_date, additional_da
         
     except Exception as e:
         return False, f"エラー: {e}"
-client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 # ==========================================
 # 画面レイアウト・サイドバー
@@ -430,14 +479,17 @@ else:
                 st.session_state.p0_generated = True
                 st.rerun()
                 
-            dl_doc_c = create_carte_docx(log["data"])
-            st.download_button(
-                label="📥 WordをDL",
-                data=dl_doc_c,
-                file_name=f"履歴_面談カルテ_{log['name']}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                key=f"hist_dl_c_{i}"
-            )
+            # ★変更：WordダウンロードからGoogle Docs生成へ変更
+            if st.button("📄 Docs生成", key=f"hist_dl_c_{i}"):
+                with st.spinner("Google Docsを作成中..."):
+                    content_str = "【初回面談カルテ】\n\n"
+                    for k, v in log["data"].items():
+                        content_str += f"■ {k}\n{v}\n\n"
+                    success, doc_url = create_google_doc(f"履歴_面談カルテ_{log['name']}", content_str)
+                    if success:
+                        st.markdown(f"✅ **[生成完了！ここをクリックしてDocsを開く]({doc_url})**")
+                    else:
+                        st.error(doc_url)
 
 st.sidebar.divider()
 st.sidebar.subheader("📄 書類生成履歴 (最新20件)")
@@ -455,14 +507,15 @@ else:
                 st.session_state.phase2_generated = True
                 st.rerun()
                 
-            dl_doc = create_docx(log["combined"])
-            st.download_button(
-                label="📥 WordをDL",
-                data=dl_doc,
-                file_name=f"履歴_職務経歴書_{i}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                key=f"hist_dl_{i}"
-            )
+            # ★変更：WordダウンロードからGoogle Docs生成へ変更
+            if st.button("📄 Docs生成", key=f"hist_dl_{i}"):
+                with st.spinner("Google Docsを作成中..."):
+                    doc_content_str = f"{log['combined']}\n\n■志望動機\n{log.get('motive', '')}"
+                    success, doc_url = create_google_doc(f"履歴_職務経歴書_{i}", doc_content_str)
+                    if success:
+                        st.markdown(f"✅ **[生成完了！ここをクリックしてDocsを開く]({doc_url})**")
+                    else:
+                        st.error(doc_url)
 
 # ==========================================
 # Phase 0: 初回面談 (カルテ作成)
@@ -505,7 +558,7 @@ if app_mode == "2. カルテ作成":
         if not combined_memo.strip():
             st.warning("文字起こしファイルを添付するか、メモを入力してください。")
         else:
-            with st.spinner("AIが面談内容を詳細に分析中..."):
+            with st.spinner("AIが面談内容を詳細に分析中... (サーバー混雑時は数十秒かかります)"):
                 # ★変更：プロンプトを大幅強化（エージェント名選択式、職歴8項目指定）
                 prompt = f"""
                 あなたは優秀なキャリアアドバイザーのアシスタントです。
@@ -568,7 +621,8 @@ if app_mode == "2. カルテ作成":
                 【次回面談時間】
                 """
                 try:
-                    resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+                    # ★修正：安全なAPI通信関数を使用
+                    resp = safe_generate_content(prompt)
                     res = resp.text
 
                     st.session_state.p0_interview_date = get_section("面談日", res)
@@ -625,6 +679,7 @@ if app_mode == "2. カルテ作成":
                         "data": carte_dict
                     })
                     if len(st.session_state.carte_log) > 20: st.session_state.carte_log.pop()
+                    st.rerun()
 
                 except Exception as e:
                     st.error(f"解析エラー: {e}")
@@ -705,29 +760,31 @@ if app_mode == "2. カルテ作成":
 
         # 出力ボタン群
         st.divider()
-        c_btn_w, c_btn_s, _ = st.columns([1, 1, 2])
+        c_btn_w, c_btn_s, _ = st.columns([1.5, 1.5, 1])
         
         with c_btn_w:
-            carte_dict_updated = {
-                "面談日": e_interview_date, # ★追加
-                "エージェント名": e_agent, "求職者名": e_seeker,
-                "エージェント面談の認識": e_recog, "エージェントの利用経験": e_exp,
-                "生年月日・年齢": e_age, "保有資格": e_cert, "現在の勤務状況": e_status,
-                "職務経歴": e_history,
-                "転職を考えたきっかけ": e_reason1, "今回の転職で叶えたいこと": e_reason2, "今後のビジョン": e_reason3,
-                "自分の強み": e_str, "強みエピソード": e_str_ep, "弱み": e_weak, "弱みエピソード": e_weak_ep,
-                "希望職種・業務": e_c_job, "希望勤務地": e_c_loc, "現在年収・給与": e_c_cur_sal, "希望年収・給与": e_c_req_sal,
-                "勤務時間・休日": e_c_time, "社風・雰囲気": e_c_vibes, "入社希望日": e_c_date,
-                "確認事項や不安ごと": e_o_ans, "次回面談日": e_o_ndate, "次回面談時間": e_o_ntime
-            }
-            docx_file = create_carte_docx(carte_dict_updated)
-            st.download_button(
-                label="📥 この面談カルテをWordでDL",
-                data=docx_file,
-                file_name=f"面談カルテ_{e_seeker}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                type="primary"
-            )
+            # ★修正: WordのダウンロードボタンからGoogle Docs作成ボタンに完全変更
+            if st.button("📄 この面談カルテをGoogle Docsに出力", type="primary", use_container_width=True):
+                with st.spinner("Google Docsを作成中..."):
+                    carte_dict_updated = {
+                        "面談日": e_interview_date, "エージェント名": e_agent, "求職者名": e_seeker,
+                        "エージェント面談の認識": e_recog, "エージェントの利用経験": e_exp,
+                        "生年月日・年齢": e_age, "保有資格": e_cert, "現在の勤務状況": e_status,
+                        "職務経歴": e_history,
+                        "転職を考えたきっかけ": e_reason1, "今回の転職で叶えたいこと": e_reason2, "今後のビジョン": e_reason3,
+                        "自分の強み": e_str, "強みエピソード": e_str_ep, "弱み": e_weak, "弱みエピソード": e_weak_ep,
+                        "希望職種・業務": e_c_job, "希望勤務地": e_c_loc, "現在年収・給与": e_c_cur_sal, "希望年収・給与": e_c_req_sal,
+                        "勤務時間・休日": e_c_time, "社風・雰囲気": e_c_vibes, "入社希望日": e_c_date,
+                        "確認事項や不安ごと": e_o_ans, "次回面談日": e_o_ndate, "次回面談時間": e_o_ntime
+                    }
+                    content_str = "【初回面談カルテ】\n\n"
+                    for k, v in carte_dict_updated.items():
+                        content_str += f"■ {k}\n{v}\n\n"
+                    success, doc_url = create_google_doc(f"面談カルテ_{e_seeker}", content_str)
+                    if success:
+                        st.success(f"✅ **[生成完了！ここをクリックしてDocsを開く]({doc_url})**")
+                    else:
+                        st.error(doc_url)
 
         with c_btn_s:
             if st.button("📊 スプレッドシートに自動転記", type="primary", use_container_width=True):
@@ -859,7 +916,7 @@ elif app_mode == "3. 書類作成":
         if not (t_ind or t_job or corp_data.strip()): st.warning("企業情報を入力してください。")
         elif not (achievement or seeker_data.strip()): st.warning("求職者情報を入力してください。")
         else:
-            with st.spinner("情報を深く分析中..."):
+            with st.spinner("情報を深く分析中... (サーバー混雑時は数十秒かかります)"):
                 prompt = f"""
 あなたは人材紹介会社の**プロキャリアライター兼採用目線の職務経歴書編集者**です。
 提供された「企業情報」と「求職者情報」を深く分析し、企業が「ぜひ会ってみたい」と思える具体的・誠実・読みやすい書類を作成してください。
@@ -917,7 +974,8 @@ elif app_mode == "3. 書類作成":
 - 「」や””や・などは控える。
 """
                 try:
-                    resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+                    # ★修正：安全なAPI通信関数を使用
+                    resp = safe_generate_content(prompt)
                     res = resp.text
                     st.session_state.phase2_score = get_section("評価", res)
                     st.session_state.phase2_advice = get_section("理由とアドバイス", res)
@@ -938,6 +996,8 @@ elif app_mode == "3. 書類作成":
                         "chat": []
                     })
                     if len(st.session_state.history_log) > 20: st.session_state.history_log.pop()
+                    st.rerun()
+
                 except Exception as e: st.error(f"解析エラー: {e}")
 
     if st.session_state.get("phase2_generated"):
@@ -946,10 +1006,17 @@ elif app_mode == "3. 書類作成":
         st.subheader("📄 職務経歴書（自己PR含む・高品質版）")
         st.code(st.session_state.phase2_combined, language="text")
         
-        c_btn1, c_btn2, _ = st.columns([1.5, 1.2, 3])
+        c_btn1, c_btn2, _ = st.columns([1.8, 1.2, 2.5])
         with c_btn1:
-            docx_file = create_docx(st.session_state.phase2_combined)
-            st.download_button(label="📥 WordでDL", data=docx_file, file_name=f"職務経歴書_{time.strftime('%Y%m%d')}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+            # ★修正: WordのダウンロードボタンからGoogle Docs作成ボタンに変更
+            if st.button("📄 この職務経歴書をGoogle Docsに出力", type="primary", use_container_width=True):
+                with st.spinner("Google Docsを作成中..."):
+                    doc_content_str = f"職務経歴書（自己PR含む）\n\n{st.session_state.phase2_combined}\n\n■志望動機\n{st.session_state.phase2_motive}"
+                    success, doc_url = create_google_doc(f"職務経歴書_{time.strftime('%Y%m%d')}", doc_content_str)
+                    if success:
+                        st.success(f"✅ **[生成完了！ここをクリックしてDocsを開く]({doc_url})**")
+                    else:
+                        st.error(doc_url)
         with c_btn2:
             components.html("""<button onclick="window.parent.print()" style="background:transparent; color:#00E5FF; border:1px solid #00E5FF; padding:8px 12px; border-radius:8px; font-size:13px; cursor:pointer; width:auto;">🖨️ PDF保存</button>""", height=50)
         
@@ -1008,8 +1075,8 @@ elif app_mode == "3. 書類作成":
                           ]
                         }}
                         """
-                        # AIにJSONを出力させる
-                        resp_json = client.models.generate_content(model='gemini-2.5-flash', contents=json_prompt)
+                        # ★修正：安全なAPI通信関数を使用
+                        resp_json = safe_generate_content(json_prompt)
                         # JSON部分だけをクリーンに取り出す
                         json_text = resp_json.text.replace('```json', '').replace('```', '').strip()
                         data = json.loads(json_text)
@@ -1104,7 +1171,8 @@ elif app_mode == "3. 書類作成":
 {chat_input}
 """
                 try:
-                    chat_resp = client.models.generate_content(model='gemini-2.5-flash', contents=chat_prompt)
+                    # ★修正：安全なAPI通信関数を使用
+                    chat_resp = safe_generate_content(chat_prompt)
                     st.markdown(chat_resp.text)
                     st.session_state.chat_messages.append({"role": "assistant", "content": chat_resp.text})
                     if st.session_state.history_log:
@@ -1140,7 +1208,8 @@ elif app_mode == "4. 書類審査":
 (簡潔に)
 """
                 try:
-                    resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+                    # ★修正：安全なAPI通信関数を使用
+                    resp = safe_generate_content(prompt)
                     st.markdown(f"<div class='cyber-panel'>{resp.text}</div>", unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f"APIエラー: {e}")
@@ -1201,7 +1270,8 @@ elif app_mode == "4. 書類審査":
 何卒ご検討のほど、よろしくお願い申し上げます。
 """
                     try:
-                        resp = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+                        # ★修正：安全なAPI通信関数を使用
+                        resp = safe_generate_content(prompt)
                         res_m = resp.text
                         match_score_raw = get_section('マッチ度', res_m)
                         ms = int(re.search(r'\d+', match_score_raw).group()) if re.search(r'\d+', match_score_raw) else 0
@@ -1216,8 +1286,6 @@ elif app_mode == "4. 書類審査":
                         st.subheader("🗣️ 面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e: st.error(f"エラー: {e}")
-
-
 
 
 
