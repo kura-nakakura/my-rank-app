@@ -245,30 +245,42 @@ def safe_generate_content(contents, model='gemini-2.5-flash'):
     raise Exception("システムが大変混雑しています。数分おいてから再度お試しください。")
 
 # ==========================================
-# 📄 Google Docs 完全自動生成機能
+# 📄 セキュア版：Google Docs作成機能（フォルダ指定方式）
 # ==========================================
 def create_google_doc(title, text_content):
     try:
         credentials_dict = dict(st.secrets["gcp_service_account"])
-        # ドライブとドキュメント両方の権限を付与
         scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/documents']
         creds = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
 
         docs_service = build('docs', 'v1', credentials=creds)
         drive_service = build('drive', 'v3', credentials=creds)
 
-        # 1. ドキュメントを新規作成
-        doc = docs_service.documents().create(body={'title': title}).execute()
-        document_id = doc.get('documentId')
+        # ★ここに取得したフォルダIDとあなたのメールアドレスを入れる★
+        FOLDER_ID = "14VDvkr4NtH6NdOa_q2G-C3vwU_Ys5E2p" 
+        YOUR_EMAIL = "hr@lifeap.co" 
+
+        # 1. 指定したフォルダ内にドキュメントを新規作成
+        file_metadata = {
+            'name': title,
+            'parents': [FOLDER_ID], # 👈 保存先フォルダを指定
+            'mimeType': 'application/vnd.google-apps.document'
+        }
+        doc_file = drive_service.files().create(body=file_metadata, fields='id').execute()
+        document_id = doc_file.get('id')
 
         # 2. テキストを流し込む
         requests = [{'insertText': {'location': {'index': 1}, 'text': text_content}}]
         docs_service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
 
-        # 3. 誰でもリンクを知っていれば閲覧できるように権限を変更
+        # 3. 誰でも閲覧ではなく、「あなた（特定ユーザー）」だけに編集権限を付与
         drive_service.permissions().create(
             fileId=document_id,
-            body={'type': 'anyone', 'role': 'reader'},
+            body={
+                'type': 'user',
+                'role': 'writer',
+                'emailAddress': YOUR_EMAIL
+            },
             fields='id'
         ).execute()
 
