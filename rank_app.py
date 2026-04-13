@@ -204,10 +204,9 @@ if not st.session_state.password_correct:
     st.stop()
 
 # ==========================================
-# 🛡️ 超堅牢なAPI通信システム（自動リトライ＆キー切替）
+# 🛡️ 超堅牢なAPI通信システム（生エラー暴露・完全版）
 # ==========================================
-def safe_generate_content(contents, model='gemini-2.5-flash'):
-    # Secretsからキーを取得（カンマ区切りで複数対応）
+def safe_generate_content(contents, model='gemini-1.5-flash'): # ★モデル名を正式なものに修正
     raw_keys = st.secrets.get("GEMINI_API_KEY", "")
     api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
     if not api_keys:
@@ -216,33 +215,65 @@ def safe_generate_content(contents, model='gemini-2.5-flash'):
     if "current_key_idx" not in st.session_state:
         st.session_state.current_key_idx = 0
 
-    max_retries = len(api_keys) * 2 # 各キー2回まで試行
-    wait_time = 15 # 429エラー時の基本待機時間（秒）
+    max_retries = len(api_keys) * 2
+    last_error = ""
 
     for attempt in range(max_retries):
         current_key = api_keys[st.session_state.current_key_idx]
         temp_client = genai.Client(api_key=current_key)
         
         try:
-            time.sleep(1) # 短時間のリクエスト集中を防ぐ
+            time.sleep(1) 
             resp = temp_client.models.generate_content(model=model, contents=contents)
             return resp
             
         except Exception as e:
-            err_msg = str(e)
-            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "503" in err_msg:
+            last_error = str(e)
+            
+            # ★429（制限）エラーの場合は65秒待つ
+            if "429" in last_error or "RESOURCE_EXHAUSTED" in last_error or "503" in last_error:
                 if len(api_keys) > 1:
                     st.session_state.current_key_idx = (st.session_state.current_key_idx + 1) % len(api_keys)
-                    st.toast("⚠️ 制限検知。バックアップキーに切り替えます...", icon="🔄")
+                    st.toast("🔄 制限検知。バックアップキーに切り替えます...", icon="🔄")
                 else:
-                    # ★ここが 65 になっていれば完璧です！
-                    st.toast("⚠️ Googleの無料枠を使い切りました。枠の回復まで65秒待機します...☕", icon="⏳")
+                    st.info("⏳ Googleの無料枠制限に引っかかりました。【65秒間】待機して再挑戦します...☕")
                     time.sleep(65) 
                 continue
             else:
-                raise e
-    raise Exception("システムが大変混雑しています。数分おいてから再度お試しください。")
+                # ★制限以外のエラー（文字数オーバーやモデル名間違いなど）は待っても無駄なので即座に理由を暴露する
+                raise Exception(f"Google APIエラー発生: {last_error}")
+                
+    # ★リトライしてもダメだった場合は、最後のエラーを暴露する
+    raise Exception(f"複数回リトライしましたが失敗しました。最終エラー: {last_error}")
 
+# ==========================================
+# ✂️ トークン節約＆情報欠落防止：ファイル読み込み関数
+# ==========================================
+def read_files(files):
+    content = ""
+    for f in files:
+        file_text = ""
+        if f.name.endswith('.txt'): 
+            file_text = f.getvalue().decode("utf-8")
+        elif f.name.endswith('.pdf'):
+            try:
+                pdf = PdfReader(f)
+                for page in pdf.pages: 
+                    file_text += (page.extract_text() or "") + "\n"
+                    # ★賢い制限：1ファイルで5000文字を超えたらストップ
+                    if len(file_text) > 5000:
+                        break
+            except: 
+                file_text = f"[Error: {f.name}]\n"
+        
+        # ★情報整理：各ファイルの先頭にファイル名を見出しとして付ける
+        truncated_text = file_text[:5000]
+        if len(file_text) > 5000:
+            truncated_text += "\n...（※データ量が多すぎるため、システムが一部を省略しました）"
+            
+        content += f"■【ファイル名：{f.name}】\n{truncated_text}\n\n"
+        
+    return content
 # ==========================================
 # 📄 セキュア版：Google Docs作成機能（共有ドライブ対応・完全版）
 # ==========================================
