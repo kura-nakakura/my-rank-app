@@ -245,7 +245,7 @@ def safe_generate_content(contents, model='gemini-2.5-flash'):
     raise Exception("システムが大変混雑しています。数分おいてから再度お試しください。")
 
 # ==========================================
-# 📄 セキュア版：Google Docs作成機能（フォルダ指定方式）
+# 📄 セキュア版：Google Docs作成機能（共有ドライブ対応・完全版）
 # ==========================================
 def create_google_doc(title, text_content):
     try:
@@ -256,24 +256,30 @@ def create_google_doc(title, text_content):
         docs_service = build('docs', 'v1', credentials=creds)
         drive_service = build('drive', 'v3', credentials=creds)
 
-        # ★ここに取得したフォルダIDとあなたのメールアドレスを入れる★
-        FOLDER_ID = "14VDvkr4NtH6NdOa_q2G-C3vwU_Ys5E2p" 
+        # ★ここにIDとメールアドレスを入力
+        FOLDER_ID = "14VDvkr4NtH6NdOa_q2G-C3vwU_Ys5E2p" # 写真のエラーに出ていたIDです
         YOUR_EMAIL = "hr@lifeap.co" 
 
         # 1. 指定したフォルダ内にドキュメントを新規作成
         file_metadata = {
             'name': title,
-            'parents': [FOLDER_ID], # 👈 保存先フォルダを指定
+            'parents': [FOLDER_ID],
             'mimeType': 'application/vnd.google-apps.document'
         }
-        doc_file = drive_service.files().create(body=file_metadata, fields='id').execute()
+        # ★魔法の合言葉：supportsAllDrives=True を追加！
+        doc_file = drive_service.files().create(
+            body=file_metadata, 
+            fields='id',
+            supportsAllDrives=True
+        ).execute()
         document_id = doc_file.get('id')
 
         # 2. テキストを流し込む
         requests = [{'insertText': {'location': {'index': 1}, 'text': text_content}}]
         docs_service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
 
-        # 3. 誰でも閲覧ではなく、「あなた（特定ユーザー）」だけに編集権限を付与
+        # 3. あなただけに権限付与
+        # ★ここにも supportsAllDrives=True を追加！
         drive_service.permissions().create(
             fileId=document_id,
             body={
@@ -281,7 +287,8 @@ def create_google_doc(title, text_content):
                 'role': 'writer',
                 'emailAddress': YOUR_EMAIL
             },
-            fields='id'
+            fields='id',
+            supportsAllDrives=True
         ).execute()
 
         doc_url = f"https://docs.google.com/document/d/{document_id}/edit"
