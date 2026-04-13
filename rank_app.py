@@ -206,7 +206,7 @@ if not st.session_state.password_correct:
 # ==========================================
 # 🛡️ 超堅牢なAPI通信システム（生エラー暴露・完全版）
 # ==========================================
-def safe_generate_content(contents, model='gemini-1.5-flash'): # ★モデル名を正式なものに修正
+def safe_generate_content(contents, model='gemini-2.5-flash'): # ★モデル名を正式なものに修正
     raw_keys = st.secrets.get("GEMINI_API_KEY", "")
     api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
     if not api_keys:
