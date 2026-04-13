@@ -229,18 +229,18 @@ def safe_generate_content(contents, model='gemini-2.5-flash'):
             return resp
             
         except Exception as e:
-                err_msg = str(e)
-                if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "503" in err_msg:
-                    if len(api_keys) > 1:
-                        st.session_state.current_key_idx = (st.session_state.current_key_idx + 1) % len(api_keys)
-                        st.toast("⚠️ 制限検知。バックアップキーに切り替えます...", icon="🔄")
-                    else:
-                        # ★ここを変更！Googleの枠が確実にリセットされるまで「65秒」待機する
-                        st.toast("⚠️ Googleの無料枠を使い切りました。枠の回復まで65秒待機します...☕", icon="⏳")
-                        time.sleep(65) 
-                    continue
+            err_msg = str(e)
+            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "503" in err_msg:
+                if len(api_keys) > 1:
+                    st.session_state.current_key_idx = (st.session_state.current_key_idx + 1) % len(api_keys)
+                    st.toast("⚠️ 制限検知。バックアップキーに切り替えます...", icon="🔄")
                 else:
-                    raise e
+                    # ★ここが 65 になっていれば完璧です！
+                    st.toast("⚠️ Googleの無料枠を使い切りました。枠の回復まで65秒待機します...☕", icon="⏳")
+                    time.sleep(65) 
+                continue
+            else:
+                raise e
     raise Exception("システムが大変混雑しています。数分おいてから再度お試しください。")
 
 # ==========================================
@@ -299,12 +299,27 @@ def create_google_doc(title, text_content):
 def read_files(files):
     content = ""
     for f in files:
-        if f.name.endswith('.txt'): content += f.getvalue().decode("utf-8") + "\n"
+        file_text = ""
+        if f.name.endswith('.txt'): 
+            file_text = f.getvalue().decode("utf-8")
         elif f.name.endswith('.pdf'):
             try:
                 pdf = PdfReader(f)
-                for page in pdf.pages: content += (page.extract_text() or "") + "\n"
-            except: content += f"[Error: {f.name}]\n"
+                for page in pdf.pages: 
+                    file_text += (page.extract_text() or "") + "\n"
+                    # ★賢い制限：1ファイルで5000文字を超えたらストップ
+                    if len(file_text) > 5000:
+                        break
+            except: 
+                file_text = f"[Error: {f.name}]\n"
+        
+        # ★情報整理：各ファイルの先頭にファイル名を見出しとして付ける
+        truncated_text = file_text[:5000]
+        if len(file_text) > 5000:
+            truncated_text += "\n...（※データ量が多すぎるため、システムが一部を省略しました）"
+            
+        content += f"■【ファイル名：{f.name}】\n{truncated_text}\n\n"
+        
     return content
 
 def get_url_text(url):
