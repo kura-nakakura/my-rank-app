@@ -229,19 +229,18 @@ def safe_generate_content(contents, model='gemini-2.5-flash'):
             return resp
             
         except Exception as e:
-            err_msg = str(e)
-            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "503" in err_msg:
-                # 複数キーがあれば切り替え、なければ待機して再実行
-                if len(api_keys) > 1:
-                    st.session_state.current_key_idx = (st.session_state.current_key_idx + 1) % len(api_keys)
-                    st.toast(f"⚠️ 制限を検知。バックアップAPIキーに切り替えて自動再実行します...", icon="🔄")
+                err_msg = str(e)
+                if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "503" in err_msg:
+                    if len(api_keys) > 1:
+                        st.session_state.current_key_idx = (st.session_state.current_key_idx + 1) % len(api_keys)
+                        st.toast("⚠️ 制限検知。バックアップキーに切り替えます...", icon="🔄")
+                    else:
+                        # ★ここを変更！Googleの枠が確実にリセットされるまで「65秒」待機する
+                        st.toast("⚠️ Googleの無料枠を使い切りました。枠の回復まで65秒待機します...☕", icon="⏳")
+                        time.sleep(65) 
+                    continue
                 else:
-                    st.toast(f"⚠️ 制限を検知。{wait_time}秒待機して自動再実行します...（{attempt+1}/{max_retries}回目）", icon="⏳")
-                    time.sleep(wait_time)
-                    wait_time += 10 # エクスポネンシャルバックオフ
-                continue
-            else:
-                raise e
+                    raise e
     raise Exception("システムが大変混雑しています。数分おいてから再度お試しください。")
 
 # ==========================================
