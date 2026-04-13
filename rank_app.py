@@ -204,18 +204,22 @@ if not st.session_state.password_correct:
     st.stop()
 
 # ==========================================
-# 🛡️ 超堅牢なAPI通信システム（生エラー暴露・完全版）
+# 🛡️ 究極のAPI通信システム（自動キーローテーション完全版）
 # ==========================================
-def safe_generate_content(contents, model='gemini-2.5-flash'): # ★モデル名を正式なものに修正
+import time
+
+def safe_generate_content(contents, model='gemini-2.5-flash'):
+    # カンマ区切りのキーをリスト化して準備
     raw_keys = st.secrets.get("GEMINI_API_KEY", "")
     api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
     if not api_keys:
-        raise Exception("APIキーが設定されていません。")
+        raise Exception("APIキーが設定されていません。secrets.tomlを確認してください。")
 
     if "current_key_idx" not in st.session_state:
         st.session_state.current_key_idx = 0
 
-    max_retries = len(api_keys) * 2
+    # 全てのキーを2周するまで諦めない（キーが3つなら最大6回特攻）
+    max_retries = len(api_keys) * 2 
     last_error = ""
 
     for attempt in range(max_retries):
@@ -223,28 +227,32 @@ def safe_generate_content(contents, model='gemini-2.5-flash'): # ★モデル名
         temp_client = genai.Client(api_key=current_key)
         
         try:
-            time.sleep(1) 
+            time.sleep(1) # 連投防止のわずかな冷却
             resp = temp_client.models.generate_content(model=model, contents=contents)
-            return resp
+            return resp # 成功したら即座に終了して結果を返す
             
         except Exception as e:
             last_error = str(e)
             
-            # ★429（制限）エラーの場合は65秒待つ
+            # ★429（制限・枯渇）エラーを検知した場合
             if "429" in last_error or "RESOURCE_EXHAUSTED" in last_error or "503" in last_error:
                 if len(api_keys) > 1:
+                    # ★最強機能：エラーが出た瞬間、次のキーに切り替えて即座に再挑戦
                     st.session_state.current_key_idx = (st.session_state.current_key_idx + 1) % len(api_keys)
-                    st.toast("🔄 制限検知。バックアップキーに切り替えます...", icon="🔄")
+                    st.toast(f"⚠️ 制限検知。バックアップ回線（キー{st.session_state.current_key_idx + 1}）に切り替えて再試行します...", icon="🔄")
+                    time.sleep(2) # 切り替え時のショック吸収
+                    continue
                 else:
-                    st.info("⏳ Googleの無料枠制限に引っかかりました。【65秒間】待機して再挑戦します...☕")
+                    # キーが1つしかない場合は、Googleの指示通りに待機するしかない
+                    st.info("⏳ 制限到達。キーが1つしかないため、枠の回復まで65秒待機します...")
                     time.sleep(65) 
-                continue
+                    continue
             else:
-                # ★制限以外のエラー（文字数オーバーやモデル名間違いなど）は待っても無駄なので即座に理由を暴露する
+                # 制限以外のエラー（書式違いなど）はローテーションしても無駄なので即エラー吐く
                 raise Exception(f"Google APIエラー発生: {last_error}")
                 
-    # ★リトライしてもダメだった場合は、最後のエラーを暴露する
-    raise Exception(f"複数回リトライしましたが失敗しました。最終エラー: {last_error}")
+    # 全てのキーを使い果たして特攻してもダメだった場合の最終防衛ライン
+    raise Exception(f"すべてのAPIキーが制限に達したため、処理を中断しました。数分〜数十分おいてからお試しください。\n【最終エラー】: {last_error}")
 
 # ==========================================
 # ✂️ トークン節約＆情報欠落防止：ファイル読み込み関数
