@@ -198,7 +198,7 @@ def export_to_spreadsheet(agent_name, seeker_name, interview_date, additional_da
         credentials_dict = dict(st.secrets["gcp_service_account"])
         scopes = ['https://www.googleapis.com/auth/spreadsheets']
         creds = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
-        gc = gspread.authorize(creds)
+        gc = gspread.Client(auth=creds)
 
         if agent_name in AGENT_SHEETS:
             sheet_id = AGENT_SHEETS[agent_name]
