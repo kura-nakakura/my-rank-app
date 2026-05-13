@@ -259,5 +259,8 @@ def export_to_spreadsheet(agent_name, seeker_name, interview_date, additional_da
 
         return True, f"「{new_sheet_name}」を作成し、データを入力しました！"
 
-    except Exception as e:
-        return False, f"エラー: {e}"
+    except Exception:
+        # ★ここが最重要！エラーを握りつぶさずに全部画面に出す！
+        import traceback
+        err_detail = traceback.format_exc()
+        return False, f"🚨詳細エラー:\n```python\n{err_detail}\n```"
