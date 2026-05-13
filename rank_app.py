@@ -2,7 +2,7 @@ import streamlit as st
 import base64
 
 from utils import create_google_doc
-from modes import mode1_rank, mode2_carte, mode3_docs, mode4_review
+from modes import mode1_rank, mode2_carte, mode3_docs, mode4_review, mode_auto
 
 
 # ==========================================
@@ -152,6 +152,8 @@ if "p0_company" not in st.session_state:
     st.session_state.p0_company = ""
 if "current_key_idx" not in st.session_state:
     st.session_state.current_key_idx = 0
+if "top_mode" not in st.session_state:
+    st.session_state.top_mode = None
 
 # ==========================================
 # ログイン
@@ -171,24 +173,71 @@ if not st.session_state.password_correct:
     st.stop()
 
 # ==========================================
+# トップ画面：モード選択
+# ==========================================
+if st.session_state.top_mode is None:
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown(
+        '<h1 style="text-align:center; color:#FFFFFF; text-shadow:0 0 20px rgba(0,229,255,0.6);">'
+        '🤖 AIエージェントシステム PRO</h1>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<p style="text-align:center; color:#00E5FF; font-size:1.1rem;">モードを選択してください</p>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("""
+        <div style="background:rgba(10,20,40,0.7); border:1px solid rgba(0,229,255,0.4);
+                    border-radius:16px; padding:30px; text-align:center; min-height:220px;">
+            <div style="font-size:3rem;">🚀</div>
+            <h2 style="color:#00E5FF;">自動化モード</h2>
+            <p style="color:#FFFFFF; font-size:0.95rem;">
+                面談メモ・履歴書・求人票を入力するだけで<br>
+                <b>ランク判定 → カルテ → 書類作成 → 書類審査</b><br>
+                を全自動で一括実行します
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🚀 自動化モードへ", type="primary", use_container_width=True, key="btn_auto"):
+            st.session_state.top_mode = "auto"
+            st.rerun()
+
+    with c2:
+        st.markdown("""
+        <div style="background:rgba(10,20,40,0.7); border:1px solid rgba(0,229,255,0.4);
+                    border-radius:16px; padding:30px; text-align:center; min-height:220px;">
+            <div style="font-size:3rem;">⚙️</div>
+            <h2 style="color:#00E5FF;">手動モード</h2>
+            <p style="color:#FFFFFF; font-size:0.95rem;">
+                4つの工程（ランク判定・カルテ作成・<br>
+                書類作成・書類審査）を<br>
+                それぞれ個別に細かく操作できます
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("⚙️ 手動モードへ", type="primary", use_container_width=True, key="btn_manual"):
+            st.session_state.top_mode = "manual"
+            st.rerun()
+
+    st.stop()
+
+# ==========================================
 # サイドバー
 # ==========================================
 st.sidebar.title("AI AGENT MENU")
 
-app_mode = st.radio(
-    "フェーズ選択",
-    [
-        "1. ランク判定",
-        "2. カルテ作成",
-        "3. 書類作成",
-        "4. 書類審査"
-    ],
-    horizontal=True,
-    label_visibility="collapsed"
-)
-st.markdown("<br>", unsafe_allow_html=True)
+if st.sidebar.button("← モード選択に戻る", use_container_width=True):
+    st.session_state.top_mode = None
+    st.rerun()
 
-st.sidebar.markdown("---")
+st.sidebar.divider()
+
 agent_name = st.sidebar.text_input("アドバイザー名", placeholder="山田 太郎")
 
 st.sidebar.divider()
@@ -267,14 +316,23 @@ else:
 # ==========================================
 # モードルーティング
 # ==========================================
-if app_mode == "1. ランク判定":
-    mode1_rank.show()
+if st.session_state.top_mode == "auto":
+    mode_auto.show()
 
-elif app_mode == "2. カルテ作成":
-    mode2_carte.show()
+else:
+    app_mode = st.radio(
+        "フェーズ選択",
+        ["1. ランク判定", "2. カルテ作成", "3. 書類作成", "4. 書類審査"],
+        horizontal=True,
+        label_visibility="collapsed",
+    )
+    st.markdown("<br>", unsafe_allow_html=True)
 
-elif app_mode == "3. 書類作成":
-    mode3_docs.show()
-
-elif app_mode == "4. 書類審査":
-    mode4_review.show(agent_name)
+    if app_mode == "1. ランク判定":
+        mode1_rank.show()
+    elif app_mode == "2. カルテ作成":
+        mode2_carte.show()
+    elif app_mode == "3. 書類作成":
+        mode3_docs.show()
+    elif app_mode == "4. 書類審査":
+        mode4_review.show(agent_name)
