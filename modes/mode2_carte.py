@@ -1,7 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import time
-
 from utils import (
     safe_generate_content,
     read_files,
@@ -11,49 +10,63 @@ from utils import (
     AGENT_LIST,
 )
 
-
 def show():
-    st.title("初回面談時：カルテ自動生成")
-    st.markdown("文字起こしファイル(PDF/TXT)を添付するか、テキストを直接貼り付けてください。AIが自動で項目を整理します。")
+    st.title("📄 初回面談時：カルテ自動生成")
+    st.markdown("面談の**文字起こしデータ**や、求職者が準備した**履歴書・職務経歴書**（PDF/TXT）を添付するか、テキストを直接貼り付けてください。AIが自動で全項目を整理します。")
 
-    components.html("""
-    <div style="font-family: sans-serif; margin-bottom: 10px;">
-        <p style="color: #00E5FF; font-size: 14px; font-weight: bold; margin-bottom: 5px;">🎤 音声入力（補助ツール）</p>
-        <button id="start-btn" style="background: transparent; color: #00E5FF; border: 1px solid #00E5FF; border-radius: 5px; padding: 5px 10px; cursor: pointer;">🔴 録音開始</button>
-        <button id="stop-btn" style="background: transparent; color: #ff4b4b; border: 1px solid #ff4b4b; border-radius: 5px; padding: 5px 10px; cursor: pointer;" disabled>⏹ 停止</button>
-        <p style="color: #FFFFFF; font-size: 12px; margin-top: 5px;">※録音した場合は下のテキストエリアに自動で入力されます</p>
-    </div>
-    <script>
-        const startBtn = document.getElementById('start-btn'); const stopBtn = document.getElementById('stop-btn');
-        let recognition;
-        if ('webkitSpeechRecognition' in window) {
-            recognition = new webkitSpeechRecognition(); recognition.lang = 'ja-JP'; recognition.continuous = true;
-            recognition.onresult = function(event) {
-                let finalTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
-                }
-            };
-            startBtn.onclick = () => { recognition.start(); startBtn.disabled = true; stopBtn.disabled = false; };
-            stopBtn.onclick = () => { recognition.stop(); startBtn.disabled = false; stopBtn.disabled = true; };
-        }
-    </script>
-    """, height=90)
+    # ==========================================
+    # 🎨 スッキリした入力インターフェース
+    # ==========================================
+    # 音声入力をアコーディオン（折りたたみ）に収納して圧迫感をなくす
+    with st.expander("🎤 音声入力（補助ツール）を使う場合はこちらを開く"):
+        components.html("""
+        <div style="font-family: sans-serif; margin-bottom: 10px;">
+            <button id="start-btn" style="background: transparent; color: #00E5FF; border: 1px solid #00E5FF; border-radius: 5px; padding: 5px 10px; cursor: pointer;">🔴 録音開始</button>
+            <button id="stop-btn" style="background: transparent; color: #ff4b4b; border: 1px solid #ff4b4b; border-radius: 5px; padding: 5px 10px; cursor: pointer;" disabled>⏹ 停止</button>
+            <p style="color: #FFFFFF; font-size: 12px; margin-top: 5px;">※録音した内容は下のテキストエリアに自動入力されます</p>
+        </div>
+        <script>
+            const startBtn = document.getElementById('start-btn'); const stopBtn = document.getElementById('stop-btn');
+            let recognition;
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition(); recognition.lang = 'ja-JP'; recognition.continuous = true;
+                recognition.onresult = function(event) {
+                    let finalTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+                    }
+                };
+                startBtn.onclick = () => { recognition.start(); startBtn.disabled = true; stopBtn.disabled = false; };
+                stopBtn.onclick = () => { recognition.stop(); startBtn.disabled = false; stopBtn.disabled = true; };
+            }
+        </script>
+        """, height=70)
 
-    u_files_memo = st.file_uploader("📂 文字起こしファイルなど (PDF/TXT)", accept_multiple_files=True, key="p0_up")
-    raw_memo = st.text_area("📝 面談メモ / 文字起こしテキスト (手入力・コピペ用)", height=200, placeholder="ここにテキストをペースト、または手書きメモを入力してください...")
+    # 入力欄を2カラムに分けて見やすく配置
+    col_in1, col_in2 = st.columns([1, 1.2])
+    with col_in1:
+        u_files_memo = st.file_uploader("📂 履歴書・職務経歴書・文字起こし (PDF/TXT)", accept_multiple_files=True, key="p0_up")
+    with col_in2:
+        raw_memo = st.text_area("📝 メモ / テキスト直貼り", height=120, placeholder="履歴書のテキストや面談メモを直接貼り付ける場合はこちら...")
 
-    if st.button("🪄 AIで項目を自動抽出", type="primary"):
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # ボタンを中央に配置
+    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+    with col_btn2:
+        start_btn = st.button("🪄 AIでカルテ情報を自動抽出する", type="primary", use_container_width=True)
+
+    if start_btn:
         file_text = read_files(u_files_memo) if u_files_memo else ""
         combined_memo = file_text + "\n" + raw_memo
 
         if not combined_memo.strip():
-            st.warning("文字起こしファイルを添付するか、メモを入力してください。")
+            st.warning("⚠️ 履歴書などのファイルを添付するか、メモを入力してください。")
         else:
-            with st.spinner("AIが面談内容を詳細に分析中... (サーバー混雑時は数十秒かかります)"):
+            with st.spinner("AIが求職者情報を詳細に分析中... (サーバー混雑時は数十秒かかります)"):
                 prompt = f"""
                 あなたは優秀なキャリアアドバイザーのアシスタントです。
-                以下の「面談の文字起こし・メモ」から、求職者の情報を抽出して整理してください。
+                以下の「面談データ（文字起こし・履歴書・メモなど）」から、求職者の情報を抽出して整理してください。
                 情報が語られていない項目は「不明」または「記載なし」と記載してください。
 
                 【面談データ】
@@ -69,18 +82,19 @@ def show():
                 【求職者名】
                 【エージェント面談の認識】
                 【エージェントの利用経験】
-                【生年月日・年齢】
+                
+                # ★修正ポイント：「2002歳」などのバグを防ぐため、年齢のみを指定
+                【年齢】
+                (※必ず「23」などのように年齢の数字のみを記載してください。生年月日は不要です)
+                
                 【保有資格】
                 【現在の勤務状況】
-
-                # --- 今回追加した重要項目 ---
                 【転職回数】
                 (在職中も含めた合計社数-1)
                 【短期離職数】
                 (1年以内の離職回数)
                 【応募企業名】
-                (具体的な社名があれば記載、なければ「（未入力）」)
-                # --------------------------
+                (具体的な社名があれば記載、なければ「未入力」)
 
                 【職務経歴】
                 (経験社数分、以下の8項目を必ず箇条書きで詳細に抽出すること)
@@ -125,7 +139,7 @@ def show():
 
                     st.session_state.p0_recog = get_section("エージェント面談の認識", res)
                     st.session_state.p0_exp = get_section("エージェントの利用経験", res)
-                    st.session_state.p0_age = get_section("生年月日・年齢", res)
+                    st.session_state.p0_age = get_section("年齢", res) # 生年月日を除外
                     st.session_state.p0_cert = get_section("保有資格", res)
                     st.session_state.p0_status = get_section("現在の勤務状況", res)
                     st.session_state.p0_history = get_section("職務経歴", res)
@@ -153,7 +167,7 @@ def show():
                         "面談日": st.session_state.p0_interview_date,
                         "エージェント名": st.session_state.p0_agent, "求職者名": st.session_state.p0_seeker,
                         "エージェント面談の認識": st.session_state.p0_recog, "エージェントの利用経験": st.session_state.p0_exp,
-                        "生年月日・年齢": st.session_state.p0_age, "保有資格": st.session_state.p0_cert, "現在の勤務状況": st.session_state.p0_status,
+                        "年齢": st.session_state.p0_age, "保有資格": st.session_state.p0_cert, "現在の勤務状況": st.session_state.p0_status,
                         "職務経歴": st.session_state.p0_history,
                         "転職を考えたきっかけ": st.session_state.p0_reason1, "今回の転職で叶えたいこと": st.session_state.p0_reason2, "今後のビジョン": st.session_state.p0_reason3,
                         "自分の強み": st.session_state.p0_str, "強みエピソード": st.session_state.p0_str_ep, "弱み": st.session_state.p0_weak, "弱みエピソード": st.session_state.p0_weak_ep,
@@ -173,7 +187,9 @@ def show():
                 except Exception as e:
                     st.error(f"解析エラー: {e}")
 
-    # 自動抽出されたデータの表示と編集
+    # ==========================================
+    # 🎯 自動抽出されたデータの表示と編集
+    # ==========================================
     if st.session_state.get("p0_generated"):
         st.markdown(f'<div class="cyber-panel"><div class="scan-line"></div><h3>📋 抽出されたカルテ情報</h3><p style="color:white; font-size:14px;">※手作業で修正・追記が可能です</p></div>', unsafe_allow_html=True)
 
@@ -184,7 +200,7 @@ def show():
             e_seeker = st.text_input("求職者名", value=st.session_state.p0_seeker)
 
             st.markdown("#### 🏢 職務経歴")
-            e_history = st.text_area("職務経歴 (複数社対応)", value=st.session_state.p0_history, height=250)
+            e_history = st.text_area("職務経歴 (複数社対応)", value=st.session_state.p0_history, height=200)
 
             st.markdown("#### 🚀 転職理由・キャリア観")
             c4, c5, c6 = st.columns(3)
@@ -211,7 +227,7 @@ def show():
                 agent_idx = AGENT_LIST.index(st.session_state.p0_agent) if st.session_state.p0_agent in AGENT_LIST else 0
                 e_agent = st.selectbox("エージェント名", AGENT_LIST + ["その他"], index=agent_idx)
             with c_ag2:
-                e_interview_date = st.text_input("面談日 (不明・空欄時は今日の日付で転記)", value=st.session_state.p0_interview_date)
+                e_interview_date = st.text_input("面談日 (空欄時は今日の日付で転記)", value=st.session_state.p0_interview_date)
 
             st.markdown("#### 👤 基本情報")
             c1, c2, c3 = st.columns(3)
@@ -222,7 +238,7 @@ def show():
                 e_recog = st.text_input("面談の認識(有/無)", value=st.session_state.p0_recog)
                 e_exp = st.text_input("利用経験(有/無)", value=st.session_state.p0_exp)
             with c3:
-                e_age = st.text_input("生年月日・年齢", value=st.session_state.p0_age)
+                e_age = st.text_input("年齢", value=st.session_state.p0_age)
 
             st.markdown("#### 🎯 就職活動希望条件")
             c9, c10, c11 = st.columns(3)
@@ -248,7 +264,9 @@ def show():
                 e_o_ndate = st.text_input("次回面談日", value=st.session_state.p0_o_ndate)
                 e_o_ntime = st.text_input("次回面談時間", value=st.session_state.p0_o_ntime)
 
-        # 出力ボタン群
+        # ==========================================
+        # 📤 出力ボタン群
+        # ==========================================
         st.divider()
         c_btn_w, c_btn_s, _ = st.columns([1.5, 1.5, 1])
 
@@ -258,7 +276,7 @@ def show():
                     carte_dict_updated = {
                         "面談日": e_interview_date, "エージェント名": e_agent, "求職者名": e_seeker,
                         "エージェント面談の認識": e_recog, "エージェントの利用経験": e_exp,
-                        "生年月日・年齢": e_age, "保有資格": e_cert, "現在の勤務状況": e_status,
+                        "年齢": e_age, "保有資格": e_cert, "現在の勤務状況": e_status,
                         "職務経歴": e_history,
                         "転職を考えたきっかけ": e_reason1, "今回の転職で叶えたいこと": e_reason2, "今後のビジョン": e_reason3,
                         "自分の強み": e_str, "強みエピソード": e_str_ep, "弱み": e_weak, "弱みエピソード": e_weak_ep,
