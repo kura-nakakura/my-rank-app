@@ -23,7 +23,7 @@ def render_cai_mode():
     # CAI専用のチャット履歴を初期化
     if "cai_messages" not in st.session_state:
         st.session_state.cai_messages = [
-            {"role": "assistant", "content": "こんにちは！あなたの書類作成パートナー「CAI（カイ）」です。まずは応募したい企業の情報や、求職者さんの面談メモなどを教えてもらえますか？一緒に魅力的な職務経歴書を作りましょう！"}
+            {"role": "assistant", "content": "こんにちは！あなたの書類作成パートナー「CAI（カイ）」です。下の「📎資料を渡す」から履歴書や求人票を添付して、私に指示を出してくださいね！"}
         ]
 
     # チャット履歴の表示
@@ -31,31 +31,43 @@ def render_cai_mode():
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
+    # 安定して動くファイル添付エリア（アコーディオンでスッキリ）
+    with st.expander("📎 CAIに資料（履歴書や求人票など）を渡す"):
+        cai_files = st.file_uploader("※ここにアップロードしたデータは、次のチャット送信時にAIに読み込まれます", accept_multiple_files=True, key="cai_file_up")
+
     # チャット入力
-    if chat_input := st.chat_input("CAIに情報を送る、または指示を出す"):
-        # ユーザーの入力を追加
+    if chat_input := st.chat_input("CAIに指示を出す（例：添付した履歴書をもとに自己PRを作って）"):
+        
+        # ユーザーの発言を履歴に追加
         st.session_state.cai_messages.append({"role": "user", "content": chat_input})
         with st.chat_message("user"):
             st.markdown(chat_input)
+            if cai_files:
+                st.caption(f"📎 {len(cai_files)}件のファイルを添付しました")
+
+        # ファイルが添付されていればテキスト化
+        attached_text = read_files(cai_files) if cai_files else ""
 
         # CAIの思考・応答プロセス
         with st.chat_message("assistant"):
             with st.spinner("CAIが思考中..."):
-                # 過去の文脈を含めたプロンプトの構築
-                history_text = "\n".join([f"{m['role']}: {m['content']}" for m in st.session_state.cai_messages[-5:]]) # 最新5件のやり取りを保持
+                history_text = "\n".join([f"{m['role']}: {m['content']}" for m in st.session_state.cai_messages[-5:]]) 
                 
                 system_prompt = f"""
 あなたは人材紹介会社のプロキャリアアドバイザーAI「CAI（カイ）」です。
 エージェント（ユーザー）と対話しながら、求職者の魅力を最大限に引き出す職務経歴書や自己PR、志望動機を一緒に作成してください。
 
-【ルール】
-1. ユーザーから情報が提供されたら、プロの視点で「どの部分が強みになるか」を分析し、書類の案を提示してください。
-2. 情報が足りない場合は、「〇〇の具体的なエピソードはありますか？」など、優しく深掘りする質問を投げかけてください。
-3. 最終的にユーザーがコピペして使えるような、完成度の高いテキストブロック（職務経歴、自己PRなど）を提供してください。
-4. 返答は明るく、頼りがいのあるプロフェッショナルなトーンで行ってください。
+【今回ユーザーが添付したファイルの内容】
+{attached_text if attached_text else "（今回はファイル添付なし）"}
 
 【これまでの会話履歴（直近）】
 {history_text}
+
+【ルール】
+1. 添付ファイルがあればそれを読み取り、プロの視点で「どの部分が強みになるか」を分析し、書類案を提示してください。
+2. 情報が足りない場合は、「〇〇の具体的なエピソードはありますか？」など、優しく深掘りする質問を投げかけてください。
+3. 最終的にユーザーがコピペして使えるような、完成度の高いテキストを提供してください。
+4. 返答は明るく、頼りがいのあるプロフェッショナルなトーンで行ってください。
 """
                 try:
                     chat_resp = safe_generate_content(system_prompt)
@@ -76,14 +88,12 @@ def render_one_click_mode():
 
     col1, col2 = st.columns(2)
     
-    # 🏢 左カラム：企業情報
     with col1:
         st.subheader("🏢 企業・募集情報")
         with st.container(border=True):
             u_url_corp = st.text_input("🔗 求人票URL (自動読み取り)", placeholder="https://...")
             u_files_corp = st.file_uploader("📂 企業求人票など", accept_multiple_files=True, key="corp_up")
 
-    # 📂 右カラム：求職者情報
     with col2:
         st.subheader("📂 求職者情報")
         with st.container(border=True):
@@ -99,7 +109,6 @@ def render_one_click_mode():
             u_files_seeker = st.file_uploader("📂 履歴書・面談文字起こし", accept_multiple_files=True, key="seeker_up")
             achievement = st.text_area("📝 求職者の補足事項・メモ", value=st.session_state.get("p2_sync_achievement", ""), height=100)
 
-            # 音声入力を折りたたんで圧迫感を消す
             with st.expander("🎤 音声入力（補助ツール）を使う場合はこちらを開く"):
                 components.html("""
                 <div style="font-family: sans-serif; margin-top: -10px;">
@@ -126,11 +135,10 @@ def render_one_click_mode():
                 """, height=150)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-    with col_btn2:
+    c_btn1, c_btn2, c_btn3 = st.columns([1, 2, 1])
+    with c_btn2:
         start_btn = st.button("✨ AI書類生成を一発で開始", type="primary", use_container_width=True)
 
-    # 処理ロジック
     if start_btn:
         corp_url_data = get_url_text(u_url_corp) if u_url_corp else ""
         corp_file_data = read_files(u_files_corp) if u_files_corp else ""
@@ -174,8 +182,7 @@ def render_one_click_mode():
                         "motive": st.session_state.phase2_motive,
                         "chat": []
                     })
-                    if len(st.session_state.history_log) > 20:
-                        st.session_state.history_log.pop()
+                    if len(st.session_state.history_log) > 20: st.session_state.history_log.pop()
                     st.rerun()
                 except Exception as e:
                     st.error(f"解析エラー: {e}")
@@ -201,36 +208,28 @@ def render_one_click_mode():
         st.subheader("📄 志望動機")
         st.code(st.session_state.phase2_motive, language="text")
 
-        # ==========================================
-        # ★大改修：Excel履歴書の自動出力
-        # ==========================================
+        # Excel履歴書の自動出力
         st.divider()
         st.subheader("📊 Excel履歴書（自動マッピング出力）")
         st.info("システム内部のテンプレートを使用して、一発でExcel履歴書を作成します。")
 
-        # サーバー（同じフォルダ）にあるテンプレートを直接指定
         TEMPLATE_PATH = "resume_template.xlsx" 
 
         if st.button("✨ ワンクリックでExcel履歴書を出力", type="primary"):
             if not os.path.exists(TEMPLATE_PATH):
-                st.error(f"⚠️ エラー: システム内に '{TEMPLATE_PATH}' が見つかりません。プロジェクトフォルダ内にテンプレートファイルを配置してください。")
+                st.error(f"⚠️ エラー: システム内に '{TEMPLATE_PATH}' が見つかりません。")
             else:
                 with st.spinner("データを解析し、Excelに自動流し込み中..."):
                     try:
-                        # 既存のテキストデータをまとめる
                         seeker_raw_data = read_files(u_files_seeker) if 'u_files_seeker' in locals() and u_files_seeker else ""
                         seeker_raw_data += "\n" + achievement if 'achievement' in locals() else ""
 
                         json_prompt = f"""
-                        あなたは履歴書データ抽出のプロです。以下の求職者データから、履歴書作成に必要な項目を抽出し、必ず以下のJSONフォーマット（プレーンテキスト）のみを出力してください。マークダウン（```jsonなど）は不要です。
-
+                        あなたは履歴書データ抽出のプロです。以下の求職者データから、履歴書作成に必要な項目を抽出し、必ず以下のJSONフォーマット（プレーンテキスト）のみを出力してください。マークダウンは不要です。
                         【抽出ルール】
                         - データが存在しない項目は空文字("")にしてください。
                         - 学歴の先頭には {{"year":"", "month":"", "content":"学歴"}}、職歴の先頭には {{"year":"", "month":"", "content":"職歴"}} を必ず挿入。
-                        
-                        【求職者データ】
-                        {seeker_raw_data}
-
+                        【求職者データ】\n{seeker_raw_data}
                         【出力フォーマット】
                         {{
                           "furigana": "ふりがな", "name": "氏名", "gender": "男/女",
@@ -242,20 +241,14 @@ def render_one_click_mode():
                         }}
                         """
                         resp_json = safe_generate_content(json_prompt)
-                        json_text = resp_json.text.replace('```json', '').replace('```', '').strip()
-                        data = json.loads(json_text)
+                        data = json.loads(resp_json.text.replace('```json', '').replace('```', '').strip())
 
                         replacements = {
-                            "{{ふりがな}}": data.get("furigana", ""),
-                            "{{氏名}}": data.get("name", ""),
-                            "{{性別}}": data.get("gender", ""),
-                            "{{生年月日_年齢}}": data.get("birth_age", ""),
-                            "{{郵便番号}}": data.get("zip_code", ""),
-                            "{{住所ふりがな}}": data.get("address_furigana", ""),
-                            "{{住所}}": data.get("address", ""),
-                            "{{電話番号}}": data.get("phone", ""),
-                            "{{Email}}": data.get("email", ""),
-                            "{{志望動機}}": st.session_state.phase2_motive,
+                            "{{ふりがな}}": data.get("furigana", ""), "{{氏名}}": data.get("name", ""),
+                            "{{性別}}": data.get("gender", ""), "{{生年月日_年齢}}": data.get("birth_age", ""),
+                            "{{郵便番号}}": data.get("zip_code", ""), "{{住所ふりがな}}": data.get("address_furigana", ""),
+                            "{{住所}}": data.get("address", ""), "{{電話番号}}": data.get("phone", ""),
+                            "{{Email}}": data.get("email", ""), "{{志望動機}}": st.session_state.phase2_motive,
                         }
 
                         history = data.get("history", [])
@@ -270,24 +263,12 @@ def render_one_click_mode():
                             replacements[f"{{{{資格月{i}}}}}"] = licenses[i-1].get("month", "") if i <= len(licenses) else ""
                             replacements[f"{{{{資格内容{i}}}}}"] = licenses[i-1].get("content", "") if i <= len(licenses) else ""
 
-                        # 魔法の自動流し込み！ローカルのファイルを指定するだけ
                         new_excel_data = fill_excel_template(TEMPLATE_PATH, replacements)
-
                         st.success("✨ Excelの自動出力が完了しました！")
                         safe_seeker_name = st.session_state.p0_seeker if st.session_state.get("p0_seeker") else "求職者"
-                        st.download_button(
-                            label="📥 完成したExcel履歴書をダウンロード",
-                            data=new_excel_data,
-                            file_name=f"完成版_履歴書_{safe_seeker_name}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            type="primary"
-                        )
-                    except json.JSONDecodeError:
-                        st.error("AIからのデータ抽出に失敗しました。もう一度ボタンをお試しください。")
-                    except Exception as e:
-                        st.error(f"エラーが発生しました: {e}")
+                        st.download_button(label="📥 完成したExcel履歴書をダウンロード", data=new_excel_data, file_name=f"完成版_履歴書_{safe_seeker_name}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary")
+                    except Exception as e: st.error(f"エラーが発生しました: {e}")
 
-        # アフター編集チャット
         st.divider()
         st.subheader("💬 AIアシスタントと出力内容を調整する")
         edit_target = st.radio("🎯 修正する項目を選択", ["全体", "職務経歴", "自己PR", "志望動機"], horizontal=True)
@@ -305,10 +286,8 @@ def render_one_click_mode():
                     chat_resp = safe_generate_content(chat_prompt)
                     st.markdown(chat_resp.text)
                     st.session_state.chat_messages.append({"role": "assistant", "content": chat_resp.text})
-                    if st.session_state.history_log:
-                        st.session_state.history_log[0]["chat"] = st.session_state.chat_messages
-                except Exception as e:
-                    st.error(f"チャットエラー: {e}")
+                    if st.session_state.history_log: st.session_state.history_log[0]["chat"] = st.session_state.chat_messages
+                except Exception as e: st.error(f"チャットエラー: {e}")
 
 # ==========================================
 # 🚀 画面の全体制御（モード切り替え）
@@ -316,10 +295,9 @@ def render_one_click_mode():
 def show():
     st.title("📄 初回面談後: 書類作成＆分析")
     
-    # 画面上部でモード切り替え用の横並びラジオボタン
     selected_mode = st.radio(
         "作成モードを選択してください",
-        ["CAIモード ", "一発作成モード"],
+        ["🤖 CAIモード (対話しながら作成)", "⚡ 一発作成モード (従来版)"],
         horizontal=True,
         label_visibility="collapsed"
     )
