@@ -4,7 +4,7 @@ import time
 import json
 import os
 
-from utils.core_tools import (
+from utils import (
     safe_generate_content,
     read_files,
     get_url_text,
