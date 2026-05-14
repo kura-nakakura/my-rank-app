@@ -335,14 +335,14 @@ def show():
     
     selected_mode = st.radio(
         "作成モードを選択してください",
-        ["CAIくん", "一撃作成"],
+        ["一撃作成","CAIくん",],
         horizontal=True,
         label_visibility="collapsed"
     )
     
     st.divider()
 
-    if "CAIモード" in selected_mode:
+    if "CAIくん" in selected_mode:
         render_cai_mode()
     else:
         render_one_click_mode()
