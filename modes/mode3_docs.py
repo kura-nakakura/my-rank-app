@@ -17,7 +17,31 @@ from utils import (
 # 🤖 モード1：CAIモード（対話型作成・進化版）
 # ==========================================
 def render_cai_mode():
-    st.markdown("### 🤖 CAI (CA × AI) パートナー")
+    # ★追加：チャットメッセージの背景をダークグレーにして視認性を高めるCSS
+    st.markdown("""
+    <style>
+    div[data-testid="stChatMessage"] {
+        background-color: rgba(40, 45, 55, 0.95) !important; /* 透けないダークグレー */
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 8px !important;
+        padding: 15px !important;
+        margin-bottom: 10px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ★追加：タイトルと「リセットボタン」を横並びに配置
+    c_title, c_reset = st.columns([4, 1])
+    with c_title:
+        st.markdown("### 🤖 CAI (CA × AI) パートナー")
+    with c_reset:
+        if st.button("🔄 トークをリセット", use_container_width=True):
+            st.session_state.cai_messages = [
+                {"role": "assistant", "content": "こんにちは！CAI（カイ）です。履歴書や求人票を下の📎から送ってください。一緒に最高の書類を仕上げましょう！"}
+            ]
+            st.session_state.cai_suggestions = ["自己PR案を作って", "この求人の強みを分析して", "職務経歴書をブラッシュアップして"]
+            st.rerun()
     
     # 1. セッション状態の初期化
     if "cai_messages" not in st.session_state:
@@ -66,7 +90,7 @@ def render_cai_mode():
 
 【ルール】
 1. 対話を通じて職務経歴書、自己PR、志望動機を完成させてください。
-2. 最後に必ず、ユーザーが次に取るべき行動（選択肢）を「次のステップ：」という見出しの後に「A, B, C」の形式で3つ提示してください。
+2. 最後に必ず、ユーザーが次に取るべき行動（選択肢）を「次のステップ：」という見出しの後に「A, B, C」などの箇条書き形式で3つ提示してください。
 3. もしユーザーが書類の出力を求めているようなら、その内容を清書して提示してください。
 """
                 try:
@@ -75,16 +99,19 @@ def render_cai_mode():
                     st.markdown(ai_response)
                     st.session_state.cai_messages.append({"role": "assistant", "content": ai_response})
 
-                    # 次の選択肢（サジェスト）を抽出して更新
+                    # ★修正：サジェスト抽出の精度を上げました（記号だけが抽出されるバグを防止）
                     if "次のステップ：" in ai_response:
-                        steps = ai_response.split("次のステップ：")[-1].strip().split("\n")[:3]
-                        st.session_state.cai_suggestions = [s.strip(" -ABC.123") for s in steps if s.strip()]
+                        steps_text = ai_response.split("次のステップ：")[-1].strip()
+                        steps = [s.strip(" *-ABC.123") for s in steps_text.split("\n") if s.strip()]
+                        valid_steps = [s for s in steps if len(s) > 2][:3] # 意味のある文字だけ抽出
+                        if valid_steps:
+                            st.session_state.cai_suggestions = valid_steps
                     
                     st.rerun() # UI更新のためにリロード
                 except Exception as e:
                     st.error(f"エラー: {e}")
 
-    # 6. 【新機能】CAIの成果物を出力する連携ボタン
+    # 6. CAIの成果物を出力する連携ボタン
     if len(st.session_state.cai_messages) > 2:
         st.divider()
         st.markdown("#### 🛠️ CAIの回答をもとに書類を出力")
@@ -93,7 +120,6 @@ def render_cai_mode():
         with c1:
             if st.button("📄 今の内容でGoogle Docsを作成", use_container_width=True):
                 with st.spinner("Docs化しています..."):
-                    # 直近のAIの回答をDocsにする
                     latest_ai_text = next((m["content"] for m in reversed(st.session_state.cai_messages) if m["role"] == "assistant"), "")
                     success, url = create_google_doc("CAI作成書類", latest_ai_text)
                     if success: st.success(f"✅ [Docsを開く]({url})")
@@ -101,13 +127,11 @@ def render_cai_mode():
         with c2:
             if st.button("📊 今の内容でExcel履歴書を作成", use_container_width=True):
                 with st.spinner("Excelを生成中..."):
-                    # 会話全体からExcel用のJSONを抽出させる
                     full_chat = "\n".join([m["content"] for m in st.session_state.cai_messages])
                     json_prompt = f"以下の会話から履歴書項目を抽出しJSONのみ出力せよ。\n{full_chat}"
                     try:
                         res_json = safe_generate_content(json_prompt).text
                         data = json.loads(res_json.replace('```json', '').replace('```', '').strip())
-                        # テンプレート流し込み（resume_template.xlsxが必要）
                         replacements = {"{{氏名}}": data.get("name", "求職者様"), "{{志望動機}}": data.get("motive", "")}
                         excel_data = fill_excel_template("resume_template.xlsx", replacements)
                         st.download_button("📥 Excelをダウンロード", excel_data, file_name="CAI履歴書.xlsx")
