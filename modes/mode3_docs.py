@@ -79,12 +79,13 @@ def render_cai_mode():
 
         # AIの応答
         with st.chat_message("assistant"):
-            with st.spinner("CAIが思考中..."):
+            with st.spinner("CAIくんが思考中..."):
                 history = "\n".join([f"{m['role']}: {m['content']}" for m in st.session_state.cai_messages[-10:]])
                 attached_text = read_files(cai_files) if cai_files else ""
                 
                 system_prompt = f"""
-あなたはキャリアアドバイザーAI「CAI」です。
+あなたは人材紹介会社のプロキャリアアドバイザーAI「CAI（カイ）」です。
+エージェント（ユーザー）と対話しながら、求職者の魅力を最大限に引き出す職務経歴書や自己PR、志望動機を一緒に作成してください。
 【会話履歴】\n{history}
 【添付資料】\n{attached_text}
 
@@ -118,14 +119,14 @@ def render_cai_mode():
         c1, c2 = st.columns(2)
         
         with c1:
-            if st.button("📄 今の内容でGoogle Docsを作成", use_container_width=True):
+            if st.button("📄 今の内容で職務経歴書を作成", use_container_width=True):
                 with st.spinner("Docs化しています..."):
                     latest_ai_text = next((m["content"] for m in reversed(st.session_state.cai_messages) if m["role"] == "assistant"), "")
                     success, url = create_google_doc("CAI作成書類", latest_ai_text)
                     if success: st.success(f"✅ [Docsを開く]({url})")
 
         with c2:
-            if st.button("📊 今の内容でExcel履歴書を作成", use_container_width=True):
+            if st.button("📊 今の内容で履歴書を作成", use_container_width=True):
                 with st.spinner("Excelを生成中..."):
                     full_chat = "\n".join([m["content"] for m in st.session_state.cai_messages])
                     json_prompt = f"以下の会話から履歴書項目を抽出しJSONのみ出力せよ。\n{full_chat}"
