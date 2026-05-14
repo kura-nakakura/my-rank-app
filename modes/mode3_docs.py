@@ -335,7 +335,7 @@ def show():
     
     selected_mode = st.radio(
         "作成モードを選択してください",
-        ["　CAI　", "　一発作成　"],
+        ["CAI", "一発作成"],
         horizontal=True,
         label_visibility="collapsed"
     )
