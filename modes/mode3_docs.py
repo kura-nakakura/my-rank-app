@@ -319,7 +319,7 @@ def show():
     # 画面上部でモード切り替え用の横並びラジオボタン
     selected_mode = st.radio(
         "作成モードを選択してください",
-        ["🤖 CAIモード (対話しながら作成)", "⚡ 一発作成モード (従来版)"],
+        ["CAIモード ", "一発作成モード"],
         horizontal=True,
         label_visibility="collapsed"
     )
