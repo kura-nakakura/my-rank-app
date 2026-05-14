@@ -14,67 +14,105 @@ from utils import (
 )
 
 # ==========================================
-# 🤖 モード1：CAIモード（対話型作成）
+# 🤖 モード1：CAIモード（対話型作成・進化版）
 # ==========================================
 def render_cai_mode():
     st.markdown("### 🤖 CAI (CA × AI) パートナー")
-    st.info("企業情報や求職者の情報をチャットで教えてください。CAIが壁打ち相手となり、一緒に最高の書類を作り上げます！")
-
-    # CAI専用のチャット履歴を初期化
+    
+    # 1. セッション状態の初期化
     if "cai_messages" not in st.session_state:
         st.session_state.cai_messages = [
-            {"role": "assistant", "content": "こんにちは！あなたの書類作成パートナー「CAI（カイ）」です。下の「📎資料を渡す」から履歴書や求人票を添付して、私に指示を出してくださいね！"}
+            {"role": "assistant", "content": "こんにちは！CAI（カイ）です。履歴書や求人票を下の📎から送ってください。一緒に最高の書類を仕上げましょう！"}
         ]
+    if "cai_suggestions" not in st.session_state:
+        st.session_state.cai_suggestions = ["自己PR案を作って", "この求人の強みを分析して", "職務経歴書をブラッシュアップして"]
 
-    # チャット履歴の表示
+    # 2. 会話履歴の表示
     for msg in st.session_state.cai_messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    # 安定して動くファイル添付エリア（アコーディオンでスッキリ）
-    with st.expander("📎 CAIに資料（履歴書や求人票など）を渡す"):
-        cai_files = st.file_uploader("※ここにアップロードしたデータは、次のチャット送信時にAIに読み込まれます", accept_multiple_files=True, key="cai_file_up")
+    # 3. 資料添付エリア
+    with st.expander("📎 CAIに資料を渡す（履歴書・求人票など）"):
+        cai_files = st.file_uploader("ファイルをアップロード", accept_multiple_files=True, key="cai_file_up")
 
-    # チャット入力
-    if chat_input := st.chat_input("CAIに指示を出す（例：添付した履歴書をもとに自己PRを作って）"):
-        
-        # ユーザーの発言を履歴に追加
-        st.session_state.cai_messages.append({"role": "user", "content": chat_input})
+    # 4. サジェストボタン（次の選択肢）
+    cols = st.columns(len(st.session_state.cai_suggestions))
+    selected_suggestion = None
+    for i, suggestion in enumerate(st.session_state.cai_suggestions):
+        if cols[i].button(f"💡 {suggestion}", key=f"sug_{i}", use_container_width=True):
+            selected_suggestion = suggestion
+
+    # 5. チャット入力（サジェストが押されたらそのテキストを使う）
+    chat_prompt_input = st.chat_input("CAIにメッセージを送る...")
+    user_input = selected_suggestion if selected_suggestion else chat_prompt_input
+
+    if user_input:
+        # ユーザー発言の追加
+        st.session_state.cai_messages.append({"role": "user", "content": user_input})
         with st.chat_message("user"):
-            st.markdown(chat_input)
-            if cai_files:
-                st.caption(f"📎 {len(cai_files)}件のファイルを添付しました")
+            st.markdown(user_input)
 
-        # ファイルが添付されていればテキスト化
-        attached_text = read_files(cai_files) if cai_files else ""
-
-        # CAIの思考・応答プロセス
+        # AIの応答
         with st.chat_message("assistant"):
             with st.spinner("CAIが思考中..."):
-                history_text = "\n".join([f"{m['role']}: {m['content']}" for m in st.session_state.cai_messages[-5:]]) 
+                history = "\n".join([f"{m['role']}: {m['content']}" for m in st.session_state.cai_messages[-10:]])
+                attached_text = read_files(cai_files) if cai_files else ""
                 
                 system_prompt = f"""
-あなたは人材紹介会社のプロキャリアアドバイザーAI「CAI（カイ）」です。
-エージェント（ユーザー）と対話しながら、求職者の魅力を最大限に引き出す職務経歴書や自己PR、志望動機を一緒に作成してください。
-
-【今回ユーザーが添付したファイルの内容】
-{attached_text if attached_text else "（今回はファイル添付なし）"}
-
-【これまでの会話履歴（直近）】
-{history_text}
+あなたはキャリアアドバイザーAI「CAI」です。
+【会話履歴】\n{history}
+【添付資料】\n{attached_text}
 
 【ルール】
-1. 添付ファイルがあればそれを読み取り、プロの視点で「どの部分が強みになるか」を分析し、書類案を提示してください。
-2. 情報が足りない場合は、「〇〇の具体的なエピソードはありますか？」など、優しく深掘りする質問を投げかけてください。
-3. 最終的にユーザーがコピペして使えるような、完成度の高いテキストを提供してください。
-4. 返答は明るく、頼りがいのあるプロフェッショナルなトーンで行ってください。
+1. 対話を通じて職務経歴書、自己PR、志望動機を完成させてください。
+2. 最後に必ず、ユーザーが次に取るべき行動（選択肢）を「次のステップ：」という見出しの後に「A, B, C」の形式で3つ提示してください。
+3. もしユーザーが書類の出力を求めているようなら、その内容を清書して提示してください。
 """
                 try:
-                    chat_resp = safe_generate_content(system_prompt)
-                    st.markdown(chat_resp.text)
-                    st.session_state.cai_messages.append({"role": "assistant", "content": chat_resp.text})
+                    resp = safe_generate_content(system_prompt)
+                    ai_response = resp.text
+                    st.markdown(ai_response)
+                    st.session_state.cai_messages.append({"role": "assistant", "content": ai_response})
+
+                    # 次の選択肢（サジェスト）を抽出して更新
+                    if "次のステップ：" in ai_response:
+                        steps = ai_response.split("次のステップ：")[-1].strip().split("\n")[:3]
+                        st.session_state.cai_suggestions = [s.strip(" -ABC.123") for s in steps if s.strip()]
+                    
+                    st.rerun() # UI更新のためにリロード
                 except Exception as e:
-                    st.error(f"CAI通信エラー: {e}")
+                    st.error(f"エラー: {e}")
+
+    # 6. 【新機能】CAIの成果物を出力する連携ボタン
+    if len(st.session_state.cai_messages) > 2:
+        st.divider()
+        st.markdown("#### 🛠️ CAIの回答をもとに書類を出力")
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            if st.button("📄 今の内容でGoogle Docsを作成", use_container_width=True):
+                with st.spinner("Docs化しています..."):
+                    # 直近のAIの回答をDocsにする
+                    latest_ai_text = next((m["content"] for m in reversed(st.session_state.cai_messages) if m["role"] == "assistant"), "")
+                    success, url = create_google_doc("CAI作成書類", latest_ai_text)
+                    if success: st.success(f"✅ [Docsを開く]({url})")
+
+        with c2:
+            if st.button("📊 今の内容でExcel履歴書を作成", use_container_width=True):
+                with st.spinner("Excelを生成中..."):
+                    # 会話全体からExcel用のJSONを抽出させる
+                    full_chat = "\n".join([m["content"] for m in st.session_state.cai_messages])
+                    json_prompt = f"以下の会話から履歴書項目を抽出しJSONのみ出力せよ。\n{full_chat}"
+                    try:
+                        res_json = safe_generate_content(json_prompt).text
+                        data = json.loads(res_json.replace('```json', '').replace('```', '').strip())
+                        # テンプレート流し込み（resume_template.xlsxが必要）
+                        replacements = {"{{氏名}}": data.get("name", "求職者様"), "{{志望動機}}": data.get("motive", "")}
+                        excel_data = fill_excel_template("resume_template.xlsx", replacements)
+                        st.download_button("📥 Excelをダウンロード", excel_data, file_name="CAI履歴書.xlsx")
+                    except:
+                        st.error("データの抽出に失敗しました。もう少し会話を続けて情報を補完してください。")
 
 # ==========================================
 # ⚡ モード2：一発作成モード（従来版＋自動Excel）
@@ -290,14 +328,14 @@ def render_one_click_mode():
                 except Exception as e: st.error(f"チャットエラー: {e}")
 
 # ==========================================
-# 🚀 画面の全体制御（モード切り替え）
+# 🚀 画面の全体制御
 # ==========================================
 def show():
-    st.title("📄 初回面談後: 書類作成＆分析")
+    st.title("📄 書類作成＆分析センター")
     
     selected_mode = st.radio(
         "作成モードを選択してください",
-        ["🤖 CAIモード (対話しながら作成)", "⚡ 一発作成モード (従来版)"],
+        ["　CAI　", "　一発作成　"],
         horizontal=True,
         label_visibility="collapsed"
     )
