@@ -14,60 +14,80 @@ from utils import (
 
 
 def show():
-    st.title("初回面談後: 書類作成＆分析")
+    st.title("📄 初回面談後: 書類作成＆分析")
+    st.markdown("企業情報と求職者情報を元に、AIが最適な職務経歴書・自己PR・志望動機を自動生成します。")
 
+    # ==========================================
+    # 🎨 スッキリした入力インターフェース
+    # ==========================================
     c_top1, c_top2 = st.columns(2)
     with c_top1: t_ind = st.text_input("志望業種", placeholder="未入力の場合は添付資料から判断します")
     with c_top2: t_job = st.text_input("志望職種", placeholder="未入力の場合は添付資料から判断します")
 
+    st.markdown("<br>", unsafe_allow_html=True)
+
     col1, col2 = st.columns(2)
+    
+    # 🏢 左カラム：企業情報
     with col1:
         st.subheader("🏢 企業・募集情報")
-        u_url_corp = st.text_input("🔗 求人票URL (自動読み取り)", placeholder="https://...")
-        u_files_corp = st.file_uploader("企業求人票など", accept_multiple_files=True, key="corp_up")
+        with st.container(border=True):
+            u_url_corp = st.text_input("🔗 求人票URL (自動読み取り)", placeholder="https://...")
+            u_files_corp = st.file_uploader("📂 企業求人票など", accept_multiple_files=True, key="corp_up")
 
+    # 📂 右カラム：求職者情報
     with col2:
         st.subheader("📂 求職者情報")
+        with st.container(border=True):
+            if st.button("🔄 Phase 0のカルテ情報を読み込む", use_container_width=True):
+                st.session_state.p2_sync_achievement = (
+                    f"【職務経歴】\n{st.session_state.p0_history}\n\n"
+                    f"【転職理由】\n{st.session_state.p0_reason1}\n\n"
+                    f"【叶えたいこと】\n{st.session_state.p0_reason2}\n\n"
+                    f"【強み】\n{st.session_state.p0_str}\n{st.session_state.p0_str_ep}"
+                )
+                st.success("Phase 0のカルテデータを読み込みました！")
 
-        if st.button("🔄 Phase 0のカルテ情報を読み込む"):
-            st.session_state.p2_sync_achievement = (
-                f"【職務経歴】\n{st.session_state.p0_history}\n\n"
-                f"【転職理由】\n{st.session_state.p0_reason1}\n\n"
-                f"【叶えたいこと】\n{st.session_state.p0_reason2}\n\n"
-                f"【強み】\n{st.session_state.p0_str}\n{st.session_state.p0_str_ep}"
-            )
-            st.success("Phase 0のカルテデータを読み込みました！")
+            u_files_seeker = st.file_uploader("📂 履歴書・面談文字起こし", accept_multiple_files=True, key="seeker_up")
 
-        u_files_seeker = st.file_uploader("履歴書・面談文字起こし", accept_multiple_files=True, key="seeker_up")
+            achievement = st.text_area("📝 求職者の補足事項・メモ", value=st.session_state.get("p2_sync_achievement", ""), height=100)
 
-        achievement = st.text_area("求職者の補足事項・メモ", value=st.session_state.get("p2_sync_achievement", ""), height=100)
-
-        components.html("""
-        <div style="font-family: sans-serif; margin-top: -10px;">
-            <p style="color: #00E5FF; font-size: 14px; font-weight: bold; margin-bottom: 5px;">🎤 音声入力</p>
-            <button id="start-btn" style="background: transparent; color: #00E5FF; border: 1px solid #00E5FF; border-radius: 5px; padding: 5px 10px; cursor: pointer;">🔴 録音開始</button>
-            <button id="stop-btn" style="background: transparent; color: #ff4b4b; border: 1px solid #ff4b4b; border-radius: 5px; padding: 5px 10px; cursor: pointer;" disabled>⏹ 停止</button>
-            <textarea id="result" style="width: 100%; height: 70px; background: rgba(0,0,0,0.3); color: white; border: 1px solid #00E5FF; border-radius: 5px; padding: 5px; margin-top: 5px;"></textarea>
-        </div>
-        <script>
-            const startBtn = document.getElementById('start-btn'); const stopBtn = document.getElementById('stop-btn');
-            const resultArea = document.getElementById('result'); let recognition;
-            if ('webkitSpeechRecognition' in window) {
-                recognition = new webkitSpeechRecognition(); recognition.lang = 'ja-JP'; recognition.continuous = true;
-                recognition.onresult = function(event) {
-                    let finalTranscript = '';
-                    for (let i = event.resultIndex; i < event.results.length; ++i) {
-                        if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+            # 音声入力を折りたたんで圧迫感を消す
+            with st.expander("🎤 音声入力（補助ツール）を使う場合はこちらを開く"):
+                components.html("""
+                <div style="font-family: sans-serif; margin-top: -10px;">
+                    <button id="start-btn" style="background: transparent; color: #00E5FF; border: 1px solid #00E5FF; border-radius: 5px; padding: 5px 10px; cursor: pointer;">🔴 録音開始</button>
+                    <button id="stop-btn" style="background: transparent; color: #ff4b4b; border: 1px solid #ff4b4b; border-radius: 5px; padding: 5px 10px; cursor: pointer;" disabled>⏹ 停止</button>
+                    <textarea id="result" style="width: 100%; height: 70px; background: rgba(0,0,0,0.3); color: white; border: 1px solid #00E5FF; border-radius: 5px; padding: 5px; margin-top: 10px;" placeholder="ここに音声が文字起こしされます..."></textarea>
+                </div>
+                <script>
+                    const startBtn = document.getElementById('start-btn'); const stopBtn = document.getElementById('stop-btn');
+                    const resultArea = document.getElementById('result'); let recognition;
+                    if ('webkitSpeechRecognition' in window) {
+                        recognition = new webkitSpeechRecognition(); recognition.lang = 'ja-JP'; recognition.continuous = true;
+                        recognition.onresult = function(event) {
+                            let finalTranscript = '';
+                            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                                if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+                            }
+                            if(finalTranscript) resultArea.value += finalTranscript + '\\n';
+                        };
+                        startBtn.onclick = () => { recognition.start(); startBtn.disabled = true; stopBtn.disabled = false; };
+                        stopBtn.onclick = () => { recognition.stop(); startBtn.disabled = false; stopBtn.disabled = true; };
                     }
-                    if(finalTranscript) resultArea.value += finalTranscript + '\\n';
-                };
-                startBtn.onclick = () => { recognition.start(); startBtn.disabled = true; stopBtn.disabled = false; };
-                stopBtn.onclick = () => { recognition.stop(); startBtn.disabled = false; stopBtn.disabled = true; };
-            }
-        </script>
-        """, height=160)
+                </script>
+                """, height=150)
 
-    if st.button("AI書類生成を開始", type="primary"):
+    # メインボタンを中央に配置して目立たせる
+    st.markdown("<br>", unsafe_allow_html=True)
+    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+    with col_btn2:
+        start_btn = st.button("✨ AI書類生成を開始", type="primary", use_container_width=True)
+
+    # ==========================================
+    # ⚙️ 処理ロジック（以下、一切変更なし）
+    # ==========================================
+    if start_btn:
         corp_url_data = get_url_text(u_url_corp) if u_url_corp else ""
         corp_file_data = read_files(u_files_corp) if u_files_corp else ""
         corp_data = corp_file_data + "\n" + corp_url_data
