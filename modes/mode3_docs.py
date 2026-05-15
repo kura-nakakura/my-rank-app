@@ -11,6 +11,7 @@ from utils import (
     get_section,
     create_google_doc,
     fill_excel_template,
+    ca_icon_img,
 )
 
 # ==========================================
@@ -34,7 +35,7 @@ def render_cai_mode():
     # ★追加：タイトルと「リセットボタン」を横並びに配置
     c_title, c_reset = st.columns([4, 1])
     with c_title:
-        st.markdown("### 🤖 CAI (CA × AI) パートナー")
+        st.markdown(f"### {ca_icon_img(28)} CAI (CA × AI) パートナー", unsafe_allow_html=True)
     with c_reset:
         if st.button("🔄 トークをリセット", use_container_width=True):
             st.session_state.cai_messages = [

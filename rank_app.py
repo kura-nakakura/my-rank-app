@@ -1,7 +1,8 @@
 import streamlit as st
 import base64
+import os
 
-from utils import create_google_doc
+from utils import create_google_doc, ca_icon_img
 # インデント（左端の空白）を完全に除去し、プレゼンモードも追加
 from modes import mode1_rank, mode2_carte, mode3_docs, mode4_review, mode_auto, mode_hyper_cai
 
@@ -17,7 +18,12 @@ def get_base64_video(video_path):
         return ""
 
 
-st.set_page_config(page_title="AIエージェントシステム PRO", page_icon="🤖", layout="wide")
+_page_icon_path = os.path.join(os.path.dirname(__file__), "assets", "ca_icon.svg")
+st.set_page_config(
+    page_title="AIエージェントシステム PRO",
+    page_icon=_page_icon_path if os.path.exists(_page_icon_path) else "🤖",
+    layout="wide",
+)
 
 video_base64 = get_base64_video("ScreenRecording_03-04-2026 13-38-53_1.mov")
 
@@ -180,7 +186,7 @@ if st.session_state.top_mode is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown(
         '<h1 style="text-align:center; color:#FFFFFF; text-shadow:0 0 20px rgba(0,229,255,0.6);">'
-        '🤖 AIエージェントシステム PRO</h1>',
+        f'{ca_icon_img(48)} AIエージェントシステム PRO</h1>',
         unsafe_allow_html=True,
     )
     st.markdown(

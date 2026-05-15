@@ -11,6 +11,29 @@ from google.oauth2.service_account import Credentials
 import datetime
 import openpyxl
 from googleapiclient.discovery import build
+import os
+import base64
+
+
+# ==========================================
+# CA専用アイコン
+# ==========================================
+def _load_ca_icon_uri():
+    icon_path = os.path.join(os.path.dirname(__file__), "assets", "ca_icon.svg")
+    try:
+        with open(icon_path, "rb") as f:
+            return f"data:image/svg+xml;base64,{base64.b64encode(f.read()).decode()}"
+    except Exception:
+        return None
+
+
+CA_ICON_URI = _load_ca_icon_uri()
+
+
+def ca_icon_img(size=28):
+    if not CA_ICON_URI:
+        return "🤖"
+    return f'<img src="{CA_ICON_URI}" width="{size}" height="{size}" style="vertical-align:middle; margin-right:8px;"/>'
 
 # ==========================================
 # システム設定・マスタ管理
