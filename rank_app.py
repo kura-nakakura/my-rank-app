@@ -2,7 +2,8 @@ import streamlit as st
 import base64
 
 from utils import create_google_doc
-from modes import mode1_rank, mode2_carte, mode3_docs, mode4_review, mode_auto
+# インデント（左端の空白）を完全に除去し、プレゼンモードも追加
+from modes import mode1_rank, mode2_carte, mode3_docs, mode4_review, mode_auto, mode_hyper_cai
 
 
 # ==========================================
@@ -187,6 +188,15 @@ if st.session_state.top_mode is None:
         unsafe_allow_html=True,
     )
     st.markdown("<br>", unsafe_allow_html=True)
+    
+    # HYPER-CAI起動ボタン
+    col_c1, col_c2, col_c3 = st.columns([1, 2, 1])
+    with col_c2:
+        if st.button("✨ HYPER-CAIくん-pro を起動する", type="primary", use_container_width=True):
+            st.session_state.top_mode = "hyper"
+            st.rerun()
+    
+    st.markdown("<br>", unsafe_allow_html=True)
 
     c1, c2 = st.columns(2)
     with c1:
@@ -318,7 +328,8 @@ else:
 # ==========================================
 if st.session_state.top_mode == "auto":
     mode_auto.show()
-
+elif st.session_state.top_mode == "hyper":
+    mode_hyper_cai.show()
 else:
     app_mode = st.radio(
         "フェーズ選択",
