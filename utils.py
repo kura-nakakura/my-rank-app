@@ -19,12 +19,20 @@ import base64
 # CA専用アイコン
 # ==========================================
 def _load_ca_icon_uri():
-    icon_path = os.path.join(os.path.dirname(__file__), "assets", "ca_icon.svg")
-    try:
-        with open(icon_path, "rb") as f:
-            return f"data:image/svg+xml;base64,{base64.b64encode(f.read()).decode()}"
-    except Exception:
-        return None
+    assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+    # JPGを優先、なければSVGにフォールバック
+    for fname, mime in [
+        ("image-1778811479160.jpg", "image/jpeg"),
+        ("ca_icon.svg", "image/svg+xml"),
+    ]:
+        path = os.path.join(assets_dir, fname)
+        if os.path.exists(path):
+            try:
+                with open(path, "rb") as f:
+                    return f"data:{mime};base64,{base64.b64encode(f.read()).decode()}"
+            except Exception:
+                continue
+    return None
 
 
 CA_ICON_URI = _load_ca_icon_uri()

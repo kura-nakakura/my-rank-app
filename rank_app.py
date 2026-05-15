@@ -18,10 +18,17 @@ def get_base64_video(video_path):
         return ""
 
 
-_page_icon_path = os.path.join(os.path.dirname(__file__), "assets", "ca_icon.svg")
+def _find_page_icon():
+    assets = os.path.join(os.path.dirname(__file__), "assets")
+    for fname in ["image-1778811479160.jpg", "ca_icon.svg"]:
+        p = os.path.join(assets, fname)
+        if os.path.exists(p):
+            return p
+    return "🤖"
+
 st.set_page_config(
     page_title="AIエージェントシステム PRO",
-    page_icon=_page_icon_path if os.path.exists(_page_icon_path) else "🤖",
+    page_icon=_find_page_icon(),
     layout="wide",
 )
 
