@@ -354,11 +354,11 @@ def render_one_click_mode():
 
 
         if st.button("🚀 この求職者・求人情報を HYPER-CAI-pro に送る"):
-    st.session_state.hyper_context = {
-        "seeker": f"【経歴】\n{st.session_state.phase2_combined}",
-        "job": f"【応募先】\n{t_ind} {t_job}\n{corp_data}",
-    }
-    st.success("HYPER-CAI-pro への引き継ぎ準備が完了しました！トップから起動してください。")
+            st.session_state.hyper_context = {
+                "seeker": f"【経歴】\n{st.session_state.phase2_combined}",
+                "job": f"【応募先】\n{t_ind} {t_job}\n{corp_data}",
+            }
+            st.success("HYPER-CAI-pro への引き継ぎ準備が完了しました！トップから起動してください。")
 # ==========================================
 # 🚀 画面の全体制御
 # ==========================================
