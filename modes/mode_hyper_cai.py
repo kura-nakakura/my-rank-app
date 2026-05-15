@@ -90,57 +90,75 @@ def _run_chat(prompt_text):
 def show():
     st.markdown("""
         <style>
-        /* 1. 背景をブラック＆ゴールドに */
+        /* ── 背景：動画を非表示・完全黒 ── */
+        video { display: none !important; }
         .stApp {
-            background: radial-gradient(circle at top, #2b2200 0%, #0a0a0a 50%, #000000 100%) !important;
-            background-color: #000000 !important;
+            background: #000000 !important;
             background-image: none !important;
         }
         header { background-color: transparent !important; }
 
-        /* 2. チャット吹き出し */
+        /* ── チャット吹き出し ── */
         div[data-testid="stChatMessage"] {
-            background: linear-gradient(145deg, rgba(30, 25, 5, 0.9) 0%, rgba(10, 10, 10, 0.95) 100%) !important;
-            border: 1px solid rgba(255, 215, 0, 0.4) !important;
-            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.05) !important;
+            background: linear-gradient(145deg, rgba(30,25,5,0.9) 0%, rgba(10,10,10,0.95) 100%) !important;
+            border: 1px solid rgba(255,215,0,0.4) !important;
+            box-shadow: 0 4px 15px rgba(255,215,0,0.05) !important;
             border-radius: 12px !important;
             color: #f3f0df !important;
         }
 
-        /* 3. エクスパンダー */
+        /* ── エクスパンダー ── */
         [data-testid="stExpander"] {
-            background-color: rgba(20, 20, 20, 0.8) !important;
-            border: 1px solid rgba(255, 215, 0, 0.3) !important;
+            background-color: rgba(20,20,20,0.8) !important;
+            border: 1px solid rgba(255,215,0,0.3) !important;
             border-radius: 10px !important;
         }
         [data-testid="stExpander"] p, [data-testid="stExpander"] span {
             color: #FFD700 !important;
         }
 
-        /* 4. メインコンテンツのボタン → ゴールド */
+        /* ── メインのゴールドボタン ── */
         section.main .stButton>button {
             background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%) !important;
             color: #000000 !important;
             border: none !important;
-            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4) !important;
+            box-shadow: 0 4px 15px rgba(255,215,0,0.4) !important;
             font-weight: 900 !important;
             border-radius: 8px !important;
             transition: all 0.3s ease;
         }
         section.main .stButton>button:hover {
-            box-shadow: 0 6px 25px rgba(255, 215, 0, 0.7) !important;
+            box-shadow: 0 6px 25px rgba(255,215,0,0.7) !important;
             transform: translateY(-2px);
         }
 
-        /* 5. サイドバーのボタン → 黒背景・金色シャドウ・白文字 */
-        [data-testid="stSidebar"] {
-            background-color: #000000 !important;
+        /* ── ツールバーボタン（小サイズ・黒金白）── */
+        .hyper-toolbar .stButton>button,
+        .hyper-toolbar [data-testid="stDownloadButton"]>button {
+            background: #000000 !important;
+            color: #FFFFFF !important;
+            border: 1px solid rgba(255,215,0,0.55) !important;
+            box-shadow: 0 0 8px rgba(255,215,0,0.35) !important;
+            font-size: 0.72rem !important;
+            font-weight: 600 !important;
+            padding: 4px 8px !important;
+            border-radius: 5px !important;
+            transition: all 0.2s ease;
+            white-space: nowrap;
         }
+        .hyper-toolbar .stButton>button:hover,
+        .hyper-toolbar [data-testid="stDownloadButton"]>button:hover {
+            box-shadow: 0 0 16px rgba(255,215,0,0.8) !important;
+            transform: translateY(-1px);
+        }
+
+        /* ── サイドバー ── */
+        [data-testid="stSidebar"] { background-color: #000000 !important; }
         [data-testid="stSidebar"] .stButton>button {
             background: #000000 !important;
             color: #FFFFFF !important;
-            border: 1px solid rgba(255, 215, 0, 0.5) !important;
-            box-shadow: 0 0 12px rgba(255, 215, 0, 0.45) !important;
+            border: 1px solid rgba(255,215,0,0.5) !important;
+            box-shadow: 0 0 12px rgba(255,215,0,0.45) !important;
             font-weight: 600 !important;
             letter-spacing: 1px;
             border-radius: 6px !important;
@@ -148,26 +166,22 @@ def show():
         }
         [data-testid="stSidebar"] .stButton>button:hover {
             background: #0a0a0a !important;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.85) !important;
+            box-shadow: 0 0 20px rgba(255,215,0,0.85) !important;
             transform: translateY(-1px);
         }
-        [data-testid="stSidebar"] h1,
-        [data-testid="stSidebar"] h2,
-        [data-testid="stSidebar"] h3,
-        [data-testid="stSidebar"] label,
-        [data-testid="stSidebar"] p {
-            color: #FFFFFF !important;
-        }
+        [data-testid="stSidebar"] h1,[data-testid="stSidebar"] h2,
+        [data-testid="stSidebar"] h3,[data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] p { color: #FFFFFF !important; }
 
-        /* 6. タイトル装飾 */
+        /* ── タイトル ── */
         .hyper-title {
             text-align: center; color: #FFD700; font-size: 48px; font-weight: 900;
-            text-shadow: 0 0 30px rgba(255, 215, 0, 0.6); margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(255,215,0,0.6); margin-bottom: 10px;
             font-family: 'Helvetica Neue', sans-serif; letter-spacing: 2px;
         }
         </style>
         <div class="hyper-title">✨ HYPER-CAI-pro ✨</div>
-        <p style="text-align: center; color: #FFD700; margin-bottom: 20px;">世界最高峰のキャリアアドバイザーAI</p>
+        <p style="text-align:center;color:#FFD700;margin-bottom:20px;">世界最高峰のキャリアアドバイザーAI</p>
     """, unsafe_allow_html=True)
 
     # ── コンテキスト初期化 ─────────────────────────────────────
@@ -176,18 +190,18 @@ def show():
     if "hyper_images" not in st.session_state:
         st.session_state.hyper_images = []
 
-    # Phase 2/3から引き継ぎがあった場合の通知（中身があれば表示）
+    # Phase 2/3引き継ぎ通知
     has_synced_seeker = bool(st.session_state.hyper_context.get("seeker", "").strip())
     has_synced_job = bool(st.session_state.hyper_context.get("job", "").strip())
     if has_synced_seeker or has_synced_job:
         st.success(
-            "📥 他モードからコンテキストを引き継ぎました："
+            "他モードからコンテキストを引き継ぎました："
             + ("【求職者情報】" if has_synced_seeker else "")
             + ("【求人企業情報】" if has_synced_job else "")
         )
 
     # ── コンテキスト入力 ───────────────────────────────────────
-    with st.expander("📥 引き継ぎ情報・ファイル添付", expanded=not (has_synced_seeker or has_synced_job)):
+    with st.expander("引き継ぎ情報・ファイル添付", expanded=not (has_synced_seeker or has_synced_job)):
         c1, c2 = st.columns(2)
         with c1:
             st.session_state.hyper_context["seeker"] = st.text_area(
@@ -198,7 +212,7 @@ def show():
                 "求人企業情報", value=st.session_state.hyper_context.get("job", ""), height=130
             )
 
-        st.markdown("##### 📎 ファイル添付（PDF・TXT・画像）")
+        st.markdown("##### ファイル添付（PDF・TXT・画像）")
         uploaded_files = st.file_uploader(
             "添付ファイル",
             accept_multiple_files=True,
@@ -206,25 +220,15 @@ def show():
             key="hyper_uploads",
             label_visibility="collapsed",
         )
-
         if uploaded_files:
-            image_files = []
-            text_files = []
-            for f in uploaded_files:
-                if f.type and f.type.startswith("image/"):
-                    image_files.append(f)
-                else:
-                    text_files.append(f)
-
-            # PDFテキスト抽出 → コンテキストに追記
+            image_files = [f for f in uploaded_files if f.type and f.type.startswith("image/")]
+            text_files  = [f for f in uploaded_files if not (f.type and f.type.startswith("image/"))]
             if text_files:
                 extracted = read_files(text_files)
                 st.session_state.hyper_context["seeker"] = (
                     st.session_state.hyper_context.get("seeker", "") + "\n\n" + extracted
                 ).strip()
-                st.success(f"📄 {len(text_files)}件のファイルからテキストを抽出してコンテキストに追加しました")
-
-            # 画像はセッションに保持（チャット送信時に使用）
+                st.success(f"{len(text_files)}件のファイルからテキストを抽出してコンテキストに追加しました")
             if image_files:
                 st.session_state.hyper_images = [
                     {"name": f.name, "bytes": f.getvalue(), "mime": f.type or "image/jpeg"}
@@ -234,7 +238,7 @@ def show():
                 for idx, f in enumerate(image_files):
                     with cols[idx % 4]:
                         st.image(f, caption=f.name, use_container_width=True)
-                st.info(f"🖼️ {len(image_files)}枚の画像を添付済み。次のメッセージ送信時にAIが画像を読み取ります。")
+                st.info(f"{len(image_files)}枚の画像を添付済み。次のメッセージ送信時にAIが読み取ります。")
 
     # ── チャット履歴初期化 ─────────────────────────────────────
     if "hyper_messages" not in st.session_state:
@@ -257,92 +261,83 @@ def show():
     if st.sidebar.button("強み・弱み・リスク分析", use_container_width=True, key="qa_swot"):
         quick_action = "この求職者の強み・弱み・採用リスクをSWOT分析の形式で洗い出して。"
 
-    # ── クイックアクションが押されたら即実行 ──────────────────
     if quick_action:
         with st.spinner("思考中..."):
             _run_chat(quick_action)
         st.rerun()
 
-    # ── チャット入力処理 ───────────────────────────────────────
+    # ── チャット入力 ──────────────────────────────────────────
     if prompt := st.chat_input("HYPER-CAIに指示を出す..."):
         with st.spinner("思考中..."):
             _run_chat(prompt)
         st.rerun()
 
-    # ── チャット表示 ──────────────────────────────────────────
-    chat_area = st.container(height=480)
-    for msg in st.session_state.hyper_messages:
-        with chat_area.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-
-    # ── 最新AI回答にHTMLプレゼンが含まれていればプレビュー ────
+    # ── 最新AI回答
     last_assistant_msg = next(
         (m["content"] for m in reversed(st.session_state.hyper_messages) if m["role"] == "assistant"),
         "",
     )
-    html_match = re.search(r'<!DOCTYPE html>.*?</html>', last_assistant_msg, re.DOTALL | re.IGNORECASE)
-    if html_match:
-        st.divider()
-        st.subheader("📺 プレゼン資料プレビュー")
-        components.html(html_match.group(), height=520, scrolling=True)
-        st.download_button(
-            "📥 プレゼンHTMLをダウンロード",
-            html_match.group(),
-            file_name=f"strategy_{time.strftime('%Y%m%d_%H%M')}.html",
-            mime="text/html",
-            key="dl_presen",
-        )
 
-    # ── 出力アクション ─────────────────────────────────────────
-    st.divider()
-    st.subheader("📤 会話の出力")
-    out1, out2, out3 = st.columns(3)
-
-    # 会話全文をテキスト化
+    # 会話全文テキスト化
     transcript = "\n\n".join([
         f"【{('AI' if m['role']=='assistant' else 'ユーザー')}】\n{m['content']}"
         for m in st.session_state.hyper_messages
     ])
 
-    with out1:
+    # ── ツールバー（チャット上部）──────────────────────────────
+    st.markdown('<div class="hyper-toolbar">', unsafe_allow_html=True)
+    tb1, tb2, tb3, tb4 = st.columns([2, 2, 2, 1])
+    with tb1:
         st.download_button(
-            "📥 会話全文をテキストで保存",
+            "テキスト保存",
             transcript,
             file_name=f"HYPER-CAI_{time.strftime('%Y%m%d_%H%M')}.txt",
             mime="text/plain",
             use_container_width=True,
             key="dl_transcript",
         )
-
-    with out2:
-        if st.button("📄 最新AI回答をGoogle Docsに出力", use_container_width=True, key="docs_last"):
+    with tb2:
+        if st.button("最新回答 → Docs", use_container_width=True, key="docs_last"):
             if not last_assistant_msg:
                 st.warning("AI回答がまだありません。")
             else:
-                with st.spinner("Google Docsを作成中..."):
-                    success, doc_url = create_google_doc(
-                        f"HYPER-CAI_回答_{time.strftime('%Y%m%d_%H%M')}",
-                        last_assistant_msg,
-                    )
-                    if success:
-                        st.success(f"✅ **[Docsを開く]({doc_url})**")
+                with st.spinner("作成中..."):
+                    ok, url = create_google_doc(f"HYPER-CAI_回答_{time.strftime('%Y%m%d_%H%M')}", last_assistant_msg)
+                    if ok:
+                        st.success(f"[Docsを開く]({url})")
                     else:
-                        st.error(doc_url)
-
-    with out3:
-        if st.button("📚 会話全文をGoogle Docsに出力", use_container_width=True, key="docs_all"):
-            with st.spinner("Google Docsを作成中..."):
-                success, doc_url = create_google_doc(
-                    f"HYPER-CAI_会話全文_{time.strftime('%Y%m%d_%H%M')}",
-                    transcript,
-                )
-                if success:
-                    st.success(f"✅ **[Docsを開く]({doc_url})**")
+                        st.error(url)
+    with tb3:
+        if st.button("全文 → Docs", use_container_width=True, key="docs_all"):
+            with st.spinner("作成中..."):
+                ok, url = create_google_doc(f"HYPER-CAI_全文_{time.strftime('%Y%m%d_%H%M')}", transcript)
+                if ok:
+                    st.success(f"[Docsを開く]({url})")
                 else:
-                    st.error(doc_url)
+                    st.error(url)
+    with tb4:
+        if st.button("リセット", use_container_width=True, key="reset_chat"):
+            st.session_state.hyper_messages = []
+            st.session_state.hyper_images = []
+            st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.divider()
-    if st.button("🔄 トークをリセット", key="reset_chat"):
-        st.session_state.hyper_messages = []
-        st.session_state.hyper_images = []
-        st.rerun()
+    # ── チャット表示（拡張）──────────────────────────────────
+    chat_area = st.container(height=640)
+    for msg in st.session_state.hyper_messages:
+        with chat_area.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    # ── HTMLプレゼンプレビュー ────────────────────────────────
+    html_match = re.search(r'<!DOCTYPE html>.*?</html>', last_assistant_msg, re.DOTALL | re.IGNORECASE)
+    if html_match:
+        st.divider()
+        st.subheader("プレゼン資料プレビュー")
+        components.html(html_match.group(), height=520, scrolling=True)
+        st.download_button(
+            "プレゼンHTMLをダウンロード",
+            html_match.group(),
+            file_name=f"strategy_{time.strftime('%Y%m%d_%H%M')}.html",
+            mime="text/html",
+            key="dl_presen",
+        )
