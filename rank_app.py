@@ -2,8 +2,7 @@ import streamlit as st
 import base64
 
 from utils import create_google_doc
-# インデント（左端の空白）を完全に除去し、プレゼンモードも追加
-from modes import mode1_rank, mode2_carte, mode3_docs, mode4_review, mode_auto, mode_hyper_cai, mode5_presentation
+from modes import mode1_rank, mode2_carte, mode3_docs, mode4_review, mode_auto
 
 
 # ==========================================
@@ -188,15 +187,6 @@ if st.session_state.top_mode is None:
         unsafe_allow_html=True,
     )
     st.markdown("<br>", unsafe_allow_html=True)
-    
-    # HYPER-CAI起動ボタン
-    col_c1, col_c2, col_c3 = st.columns([1, 2, 1])
-    with col_c2:
-        if st.button("✨ HYPER-CAIくん-pro を起動する", type="primary", use_container_width=True):
-            st.session_state.top_mode = "hyper"
-            st.rerun()
-    
-    st.markdown("<br>", unsafe_allow_html=True)
 
     c1, c2 = st.columns(2)
     with c1:
@@ -328,12 +318,11 @@ else:
 # ==========================================
 if st.session_state.top_mode == "auto":
     mode_auto.show()
-elif st.session_state.top_mode == "hyper":
-    mode_hyper_cai.show()
+
 else:
     app_mode = st.radio(
         "フェーズ選択",
-        ["1. ランク判定", "2. カルテ作成", "3. 書類作成", "4. 書類審査", "5. プレゼン作成"],
+        ["1. ランク判定", "2. カルテ作成", "3. 書類作成", "4. 書類審査"],
         horizontal=True,
         label_visibility="collapsed",
     )
@@ -347,5 +336,3 @@ else:
         mode3_docs.show()
     elif app_mode == "4. 書類審査":
         mode4_review.show(agent_name)
-    elif app_mode == "5. プレゼン作成":
-        mode5_presentation.show()
