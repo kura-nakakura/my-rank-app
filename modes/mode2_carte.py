@@ -11,14 +11,14 @@ from utils import (
 )
 
 def show():
-    st.title("📄 初回面談時：カルテ自動生成")
+    st.markdown(f"# {ca_icon_img(40)} 初回面談時：カルテ自動生成", unsafe_allow_html=True)
     st.markdown("面談の**文字起こしデータ**や、求職者が準備した**履歴書・職務経歴書**（PDF/TXT）を添付するか、テキストを直接貼り付けてください。AIが自動で全項目を整理します。")
 
     # ==========================================
     # 🎨 スッキリした入力インターフェース
     # ==========================================
     # 音声入力をアコーディオン（折りたたみ）に収納して圧迫感をなくす
-    with st.expander("🎤 音声入力（補助ツール）を使う場合はこちらを開く"):
+    with st.expander("音声入力（補助ツール）を使う場合はこちらを開く"):
         components.html("""
         <div style="font-family: sans-serif; margin-bottom: 10px;">
             <button id="start-btn" style="background: transparent; color: #00E5FF; border: 1px solid #00E5FF; border-radius: 5px; padding: 5px 10px; cursor: pointer;">🔴 録音開始</button>
@@ -45,23 +45,23 @@ def show():
     # 入力欄を2カラムに分けて見やすく配置
     col_in1, col_in2 = st.columns([1, 1.2])
     with col_in1:
-        u_files_memo = st.file_uploader("📂 履歴書・職務経歴書・文字起こし (PDF/TXT)", accept_multiple_files=True, key="p0_up")
+        u_files_memo = st.file_uploader("履歴書・職務経歴書・文字起こし (PDF/TXT)", accept_multiple_files=True, key="p0_up")
     with col_in2:
-        raw_memo = st.text_area("📝 メモ / テキスト直貼り", height=120, placeholder="履歴書のテキストや面談メモを直接貼り付ける場合はこちら...")
+        raw_memo = st.text_area("メモ / テキスト直貼り", height=120, placeholder="履歴書のテキストや面談メモを直接貼り付ける場合はこちら...")
 
     st.markdown("<br>", unsafe_allow_html=True)
     
     # ボタンを中央に配置
     col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
     with col_btn2:
-        start_btn = st.button("🪄 AIでカルテ情報を自動抽出する", type="primary", use_container_width=True)
+        start_btn = st.button("AIでカルテ情報を自動抽出する", type="primary", use_container_width=True)
 
     if start_btn:
         file_text = read_files(u_files_memo) if u_files_memo else ""
         combined_memo = file_text + "\n" + raw_memo
 
         if not combined_memo.strip():
-            st.warning("⚠️ 履歴書などのファイルを添付するか、メモを入力してください。")
+            st.warning("履歴書などのファイルを添付するか、メモを入力してください。")
         else:
             with st.spinner("AIが求職者情報を詳細に分析中... (サーバー混雑時は数十秒かかります)"):
                 prompt = f"""
@@ -191,18 +191,18 @@ def show():
     # 🎯 自動抽出されたデータの表示と編集
     # ==========================================
     if st.session_state.get("p0_generated"):
-        st.markdown(f'<div class="cyber-panel"><div class="scan-line"></div><h3>📋 抽出されたカルテ情報</h3><p style="color:white; font-size:14px;">※手作業で修正・追記が可能です</p></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="cyber-panel"><div class="scan-line"></div><h3>抽出されたカルテ情報</h3><p style="color:white; font-size:14px;">※手作業で修正・追記が可能です</p></div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.subheader("📄 職務経歴書に直結する情報")
+        st.subheader("職務経歴書に直結する情報")
         with st.container(border=True):
             st.markdown('<div class="emerald-box"></div>', unsafe_allow_html=True)
             e_seeker = st.text_input("求職者名", value=st.session_state.p0_seeker)
 
-            st.markdown("#### 🏢 職務経歴")
+            st.markdown("#### 職務経歴")
             e_history = st.text_area("職務経歴 (複数社対応)", value=st.session_state.p0_history, height=200)
 
-            st.markdown("#### 🚀 転職理由・キャリア観")
+            st.markdown("#### 転職理由・キャリア観")
             c4, c5, c6 = st.columns(3)
             with c4: e_reason1 = st.text_area("転職を考えたきっかけ", value=st.session_state.p0_reason1, height=120)
             with c5: e_reason2 = st.text_area("転職で叶えたいこと", value=st.session_state.p0_reason2, height=120)

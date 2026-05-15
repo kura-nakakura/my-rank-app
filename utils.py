@@ -20,11 +20,12 @@ import base64
 # ==========================================
 def _load_ca_icon_uri():
     assets_dir = os.path.join(os.path.dirname(__file__), "assets")
-    # JPGを優先、なければSVGにフォールバック
-    for fname, mime in [
+    candidates = [
+        ("image-1778811479160.png", "image/png"),
         ("image-1778811479160.jpg", "image/jpeg"),
         ("ca_icon.svg", "image/svg+xml"),
-    ]:
+    ]
+    for fname, mime in candidates:
         path = os.path.join(assets_dir, fname)
         if os.path.exists(path):
             try:

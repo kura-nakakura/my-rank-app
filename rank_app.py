@@ -20,11 +20,15 @@ def get_base64_video(video_path):
 
 def _find_page_icon():
     assets = os.path.join(os.path.dirname(__file__), "assets")
-    for fname in ["image-1778811479160.jpg", "ca_icon.svg"]:
+    for fname in [
+        "image-1778811479160.png",
+        "image-1778811479160.jpg",
+        "ca_icon.svg",
+    ]:
         p = os.path.join(assets, fname)
         if os.path.exists(p):
             return p
-    return "🤖"
+    return "🦉"
 
 st.set_page_config(
     page_title="AIエージェントシステム PRO",
@@ -176,7 +180,10 @@ LOGIN_PASSWORD = "HR9237"
 if "password_correct" not in st.session_state:
     st.session_state.password_correct = False
 if not st.session_state.password_correct:
-    st.title("🛡️ システムログイン")
+    st.markdown(
+        f'<h1>{ca_icon_img(40)} システムログイン</h1>',
+        unsafe_allow_html=True,
+    )
     pwd = st.text_input("アクセスコード", type="password")
     if st.button("ログイン"):
         if pwd == LOGIN_PASSWORD:
@@ -236,7 +243,7 @@ if st.session_state.top_mode is None:
         st.markdown("""
         <div style="background:rgba(10,20,40,0.7); border:1px solid rgba(0,229,255,0.4);
                     border-radius:16px; padding:30px; text-align:center; min-height:220px;">
-            <div style="font-size:3rem;">🚀</div>
+            <div style="font-size:2rem; letter-spacing:6px; color:#00E5FF;">AUTO</div>
             <h2 style="color:#00E5FF;">自動化モード</h2>
             <p style="color:#FFFFFF; font-size:0.95rem;">
                 面談メモ・履歴書・求人票を入力するだけで<br>
@@ -246,7 +253,7 @@ if st.session_state.top_mode is None:
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🚀 自動化モードへ", type="primary", use_container_width=True, key="btn_auto"):
+        if st.button("自動化モードへ", type="primary", use_container_width=True, key="btn_auto"):
             st.session_state.top_mode = "auto"
             st.rerun()
 
@@ -254,7 +261,7 @@ if st.session_state.top_mode is None:
         st.markdown("""
         <div style="background:rgba(10,20,40,0.7); border:1px solid rgba(0,229,255,0.4);
                     border-radius:16px; padding:30px; text-align:center; min-height:220px;">
-            <div style="font-size:3rem;">⚙️</div>
+            <div style="font-size:2rem; letter-spacing:6px; color:#00E5FF;">MANUAL</div>
             <h2 style="color:#00E5FF;">手動モード</h2>
             <p style="color:#FFFFFF; font-size:0.95rem;">
                 4つの工程（ランク判定・カルテ作成・<br>
@@ -264,7 +271,7 @@ if st.session_state.top_mode is None:
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("⚙️ 手動モードへ", type="primary", use_container_width=True, key="btn_manual"):
+        if st.button("手動モードへ", type="primary", use_container_width=True, key="btn_manual"):
             st.session_state.top_mode = "manual"
             st.rerun()
 

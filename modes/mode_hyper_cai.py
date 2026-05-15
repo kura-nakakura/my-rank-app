@@ -180,8 +180,8 @@ def show():
             font-family: 'Helvetica Neue', sans-serif; letter-spacing: 2px;
         }
         </style>
-        <div class="hyper-title">✨ HYPER-CAI-pro ✨</div>
-        <p style="text-align:center;color:#FFD700;margin-bottom:20px;">世界最高峰のキャリアアドバイザーAI</p>
+        <div class="hyper-title">HYPER-CAI-pro</div>
+        <p style="text-align:center;color:#FFD700;margin-bottom:20px;letter-spacing:4px;">世界最高峰のキャリアアドバイザーAI</p>
     """, unsafe_allow_html=True)
 
     # ── コンテキスト初期化 ─────────────────────────────────────

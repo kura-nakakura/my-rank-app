@@ -73,4 +73,4 @@ def show():
         elif 7 <= total < 15:
             st.info("safe **【エージェント指示】** 優先度：中")
         else:
-            st.error("🚨 **【エージェント指示】** 優先度：低")
+            st.error("**【エージェント指示】** 優先度：低")

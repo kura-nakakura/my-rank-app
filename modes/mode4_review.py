@@ -43,12 +43,12 @@ def show(agent_name):
     else:
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("🏢 企業要件")
-            c_url_3 = st.text_input("🔗 求人URL", key="c_url_3")
+            st.subheader("企業要件")
+            c_url_3 = st.text_input("求人URL", key="c_url_3")
             c_info = st.text_area("求人内容", height=130)
             c_files = st.file_uploader("資料", accept_multiple_files=True, key="c_up_3")
         with col2:
-            st.subheader("📄 完成書類")
+            st.subheader("完成書類")
             s_info = st.text_area("追加補足", height=200)
             s_files = st.file_uploader("完成書類", accept_multiple_files=True, key="s_up_3")
 
@@ -101,20 +101,20 @@ def show(agent_name):
                         match_score_raw = get_section('マッチ度', res_m)
                         ms = int(re.search(r'\d+', match_score_raw).group()) if re.search(r'\d+', match_score_raw) else 0
                         st.metric("最終マッチ度", f"{ms} %")
-                        st.markdown(f"#### ✍️ アドバイス\n<div class='fb-box'>{get_section('書類修正アドバイス', res_m)}</div>", unsafe_allow_html=True)
+                        st.markdown(f"#### アドバイス\n<div class='fb-box'>{get_section('書類修正アドバイス', res_m)}</div>", unsafe_allow_html=True)
                         if ms >= 80:
-                            st.success("🔥 合格ライン突破！")
+                            st.success("合格ライン突破！")
                             st.code(get_section('推薦文', res_m), language="text")
                         else:
-                            st.warning("⚠️ マッチ度が基準(80%)を下回っています。")
+                            st.warning("マッチ度が基準(80%)を下回っています。")
                             st.code(get_section('推薦文', res_m), language="text")
-                        st.subheader("🗣️ 面接対策")
+                        st.subheader("面接対策")
                         st.write(get_section('面接対策', res_m))
                     except Exception as e:
                         st.error(f"エラー: {e}")
 
 
-if st.button("🚀 この求職者・求人情報を HYPER-CAI-pro に送る"):
+if st.button("この求職者・求人情報を HYPER-CAI-pro に送る"):
     st.session_state.hyper_context = {
         "seeker": f"【経歴】\n{st.session_state.phase2_combined}",
         "job": f"【応募先】\n{t_ind} {t_job}\n{corp_data}",

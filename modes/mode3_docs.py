@@ -37,9 +37,9 @@ def render_cai_mode():
     with c_title:
         st.markdown(f"### {ca_icon_img(28)} CAI (CA × AI) パートナー", unsafe_allow_html=True)
     with c_reset:
-        if st.button("🔄 トークをリセット", use_container_width=True):
+        if st.button("トークをリセット", use_container_width=True):
             st.session_state.cai_messages = [
-                {"role": "assistant", "content": "こんにちは！CAI（カイ）です。履歴書や求人票を下の📎から送ってください。一緒に最高の書類を仕上げましょう！"}
+                {"role": "assistant", "content": "こんにちは！CAI（カイ）です。履歴書や求人票を下のクリップから送ってください。一緒に最高の書類を仕上げましょう！"}
             ]
             st.session_state.cai_suggestions = ["自己PR案を作って", "この求人の強みを分析して", "職務経歴書をブラッシュアップして"]
             st.rerun()
@@ -47,7 +47,7 @@ def render_cai_mode():
     # 1. セッション状態の初期化
     if "cai_messages" not in st.session_state:
         st.session_state.cai_messages = [
-            {"role": "assistant", "content": "こんにちは！CAI（カイ）です。履歴書や求人票を下の📎から送ってください。一緒に最高の書類を仕上げましょう！"}
+            {"role": "assistant", "content": "こんにちは！CAI（カイ）です。履歴書や求人票を下のクリップから送ってください。一緒に最高の書類を仕上げましょう！"}
         ]
     if "cai_suggestions" not in st.session_state:
         st.session_state.cai_suggestions = ["自己PR案を作って", "この求人の強みを分析して", "職務経歴書をブラッシュアップして"]
@@ -58,14 +58,14 @@ def render_cai_mode():
             st.markdown(msg["content"])
 
     # 3. 資料添付エリア
-    with st.expander("📎 CAIに資料を渡す（履歴書・求人票など）"):
+    with st.expander("CAIに資料を渡す（履歴書・求人票など）"):
         cai_files = st.file_uploader("ファイルをアップロード", accept_multiple_files=True, key="cai_file_up")
 
     # 4. サジェストボタン（次の選択肢）
     cols = st.columns(len(st.session_state.cai_suggestions))
     selected_suggestion = None
     for i, suggestion in enumerate(st.session_state.cai_suggestions):
-        if cols[i].button(f"💡 {suggestion}", key=f"sug_{i}", use_container_width=True):
+        if cols[i].button(f"{suggestion}", key=f"sug_{i}", use_container_width=True):
             selected_suggestion = suggestion
 
     # 5. チャット入力（サジェストが押されたらそのテキストを使う）
@@ -116,18 +116,18 @@ def render_cai_mode():
     # 6. CAIの成果物を出力する連携ボタン
     if len(st.session_state.cai_messages) > 2:
         st.divider()
-        st.markdown("#### 🛠️ CAIの回答をもとに書類を出力")
+        st.markdown("#### CAIの回答をもとに書類を出力")
         c1, c2 = st.columns(2)
         
         with c1:
-            if st.button("📄 今の内容で職務経歴書を作成", use_container_width=True):
+            if st.button("今の内容で職務経歴書を作成", use_container_width=True):
                 with st.spinner("Docs化しています..."):
                     latest_ai_text = next((m["content"] for m in reversed(st.session_state.cai_messages) if m["role"] == "assistant"), "")
                     success, url = create_google_doc("CAI作成書類", latest_ai_text)
                     if success: st.success(f"✅ [Docsを開く]({url})")
 
         with c2:
-            if st.button("📊 今の内容で履歴書を作成", use_container_width=True):
+            if st.button("今の内容で履歴書を作成", use_container_width=True):
                 with st.spinner("Excelを生成中..."):
                     full_chat = "\n".join([m["content"] for m in st.session_state.cai_messages])
                     json_prompt = f"以下の会話から履歴書項目を抽出しJSONのみ出力せよ。\n{full_chat}"
@@ -136,7 +136,7 @@ def render_cai_mode():
                         data = json.loads(res_json.replace('```json', '').replace('```', '').strip())
                         replacements = {"{{氏名}}": data.get("name", "求職者様"), "{{志望動機}}": data.get("motive", "")}
                         excel_data = fill_excel_template("resume_template.xlsx", replacements)
-                        st.download_button("📥 Excelをダウンロード", excel_data, file_name="CAI履歴書.xlsx")
+                        st.download_button("Excelをダウンロード", excel_data, file_name="CAI履歴書.xlsx")
                     except:
                         st.error("データの抽出に失敗しました。もう少し会話を続けて情報を補完してください。")
 
@@ -153,15 +153,15 @@ def render_one_click_mode():
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("🏢 企業・募集情報")
+        st.subheader("企業・募集情報")
         with st.container(border=True):
-            u_url_corp = st.text_input("🔗 求人票URL (自動読み取り)", placeholder="https://...")
-            u_files_corp = st.file_uploader("📂 企業求人票など", accept_multiple_files=True, key="corp_up")
+            u_url_corp = st.text_input("求人票URL (自動読み取り)", placeholder="https://...")
+            u_files_corp = st.file_uploader("企業求人票など", accept_multiple_files=True, key="corp_up")
 
     with col2:
-        st.subheader("📂 求職者情報")
+        st.subheader("求職者情報")
         with st.container(border=True):
-            if st.button("🔄 Phase 0のカルテ情報を読み込む", use_container_width=True):
+            if st.button("Phase 0のカルテ情報を読み込む", use_container_width=True):
                 st.session_state.p2_sync_achievement = (
                     f"【職務経歴】\n{st.session_state.get('p0_history', '')}\n\n"
                     f"【転職理由】\n{st.session_state.get('p0_reason1', '')}\n\n"
@@ -170,10 +170,10 @@ def render_one_click_mode():
                 )
                 st.success("Phase 0のカルテデータを読み込みました！")
 
-            u_files_seeker = st.file_uploader("📂 履歴書・面談文字起こし", accept_multiple_files=True, key="seeker_up")
-            achievement = st.text_area("📝 求職者の補足事項・メモ", value=st.session_state.get("p2_sync_achievement", ""), height=100)
+            u_files_seeker = st.file_uploader("履歴書・面談文字起こし", accept_multiple_files=True, key="seeker_up")
+            achievement = st.text_area("求職者の補足事項・メモ", value=st.session_state.get("p2_sync_achievement", ""), height=100)
 
-            with st.expander("🎤 音声入力（補助ツール）を使う場合はこちらを開く"):
+            with st.expander("音声入力（補助ツール）を使う場合はこちらを開く"):
                 components.html("""
                 <div style="font-family: sans-serif; margin-top: -10px;">
                     <button id="start-btn" style="background: transparent; color: #00E5FF; border: 1px solid #00E5FF; border-radius: 5px; padding: 5px 10px; cursor: pointer;">🔴 録音開始</button>
@@ -201,7 +201,7 @@ def render_one_click_mode():
     st.markdown("<br>", unsafe_allow_html=True)
     c_btn1, c_btn2, c_btn3 = st.columns([1, 2, 1])
     with c_btn2:
-        start_btn = st.button("✨ AI書類生成を一発で開始", type="primary", use_container_width=True)
+        start_btn = st.button("AI書類生成を一発で開始", type="primary", use_container_width=True)
 
     if start_btn:
         corp_url_data = get_url_text(u_url_corp) if u_url_corp else ""
@@ -255,12 +255,12 @@ def render_one_click_mode():
     if st.session_state.get("phase2_generated"):
         st.markdown(f'<div class="cyber-panel"><div class="scan-line"></div><h3>AI分析評価スコア: {st.session_state.phase2_score}</h3><div class="fb-box">{st.session_state.phase2_advice}</div></div>', unsafe_allow_html=True)
         st.divider()
-        st.subheader("📄 職務経歴書（自己PR含む・高品質版）")
+        st.subheader("職務経歴書（自己PR含む・高品質版）")
         st.code(st.session_state.phase2_combined, language="text")
 
         c_btn1, c_btn2, _ = st.columns([1.8, 1.2, 2.5])
         with c_btn1:
-            if st.button("📄 この職務経歴書をGoogle Docsに出力", type="primary", use_container_width=True):
+            if st.button("この職務経歴書をGoogle Docsに出力", type="primary", use_container_width=True):
                 with st.spinner("Google Docsを作成中..."):
                     doc_content_str = f"職務経歴書（自己PR含む）\n\n{st.session_state.phase2_combined}\n\n■志望動機\n{st.session_state.phase2_motive}"
                     success, doc_url = create_google_doc(f"職務経歴書_{time.strftime('%Y%m%d')}", doc_content_str)
@@ -269,19 +269,19 @@ def render_one_click_mode():
         with c_btn2:
             components.html("""<button onclick="window.parent.print()" style="background:transparent; color:#00E5FF; border:1px solid #00E5FF; padding:8px 12px; border-radius:8px; font-size:13px; cursor:pointer; width:auto;">🖨️ PDF保存</button>""", height=50)
 
-        st.subheader("📄 志望動機")
+        st.subheader("志望動機")
         st.code(st.session_state.phase2_motive, language="text")
 
         # Excel履歴書の自動出力
         st.divider()
-        st.subheader("📊 Excel履歴書（自動マッピング出力）")
+        st.subheader("Excel履歴書（自動マッピング出力）")
         st.info("システム内部のテンプレートを使用して、一発でExcel履歴書を作成します。")
 
         TEMPLATE_PATH = "resume_template.xlsx" 
 
-        if st.button("✨ ワンクリックでExcel履歴書を出力", type="primary"):
+        if st.button("ワンクリックでExcel履歴書を出力", type="primary"):
             if not os.path.exists(TEMPLATE_PATH):
-                st.error(f"⚠️ エラー: システム内に '{TEMPLATE_PATH}' が見つかりません。")
+                st.error(f"エラー: システム内に '{TEMPLATE_PATH}' が見つかりません。")
             else:
                 with st.spinner("データを解析し、Excelに自動流し込み中..."):
                     try:
@@ -328,14 +328,14 @@ def render_one_click_mode():
                             replacements[f"{{{{資格内容{i}}}}}"] = licenses[i-1].get("content", "") if i <= len(licenses) else ""
 
                         new_excel_data = fill_excel_template(TEMPLATE_PATH, replacements)
-                        st.success("✨ Excelの自動出力が完了しました！")
+                        st.success("Excelの自動出力が完了しました！")
                         safe_seeker_name = st.session_state.p0_seeker if st.session_state.get("p0_seeker") else "求職者"
-                        st.download_button(label="📥 完成したExcel履歴書をダウンロード", data=new_excel_data, file_name=f"完成版_履歴書_{safe_seeker_name}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary")
+                        st.download_button(label="完成したExcel履歴書をダウンロード", data=new_excel_data, file_name=f"完成版_履歴書_{safe_seeker_name}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary")
                     except Exception as e: st.error(f"エラーが発生しました: {e}")
 
         st.divider()
-        st.subheader("💬 AIアシスタントと出力内容を調整する")
-        edit_target = st.radio("🎯 修正する項目を選択", ["全体", "職務経歴", "自己PR", "志望動機"], horizontal=True)
+        st.subheader("AIアシスタントと出力内容を調整する")
+        edit_target = st.radio("修正する項目を選択", ["全体", "職務経歴", "自己PR", "志望動機"], horizontal=True)
 
         for msg in st.session_state.chat_messages:
             with st.chat_message(msg["role"]): st.markdown(msg["content"])
@@ -354,7 +354,7 @@ def render_one_click_mode():
                 except Exception as e: st.error(f"チャットエラー: {e}")
 
 
-        if st.button("🚀 この求職者・求人情報を HYPER-CAI-pro に送る"):
+        if st.button("この求職者・求人情報を HYPER-CAI-pro に送る"):
             st.session_state.hyper_context = {
                 "seeker": f"【経歴】\n{st.session_state.phase2_combined}",
                 "job": f"【応募先】\n{t_ind} {t_job}\n{corp_data}",
@@ -364,7 +364,7 @@ def render_one_click_mode():
 # 🚀 画面の全体制御
 # ==========================================
 def show():
-    st.title("📄 書類作成＆分析センター")
+    st.markdown(f"# {ca_icon_img(40)} 書類作成＆分析センター", unsafe_allow_html=True)
     
     selected_mode = st.radio(
         "作成モードを選択してください",
