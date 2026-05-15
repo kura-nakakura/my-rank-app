@@ -2,7 +2,7 @@ import streamlit as st
 import base64
 
 from utils import create_google_doc
-from modes import mode1_rank, mode2_carte, mode3_docs, mode4_review, mode_auto
+from modes import mode1_rank, mode2_carte, mode3_docs, mode4_review, mode_auto,mode_hyper_cai
 
 
 # ==========================================
