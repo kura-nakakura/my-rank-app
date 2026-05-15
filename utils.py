@@ -21,6 +21,7 @@ import base64
 def _load_ca_icon_uri():
     assets_dir = os.path.join(os.path.dirname(__file__), "assets")
     candidates = [
+        ("ca_icon_transparent.png", "image/png"),
         ("image-1778811479160.png", "image/png"),
         ("image-1778811479160.jpg", "image/jpeg"),
         ("ca_icon.svg", "image/svg+xml"),

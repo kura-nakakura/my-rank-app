@@ -21,6 +21,7 @@ def get_base64_video(video_path):
 def _find_page_icon():
     assets = os.path.join(os.path.dirname(__file__), "assets")
     for fname in [
+        "ca_icon_transparent.png",
         "image-1778811479160.png",
         "image-1778811479160.jpg",
         "ca_icon.svg",
