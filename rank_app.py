@@ -195,10 +195,30 @@ if st.session_state.top_mode is None:
     )
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # HYPER-CAI起動ボタン
-    col_c1, col_c2, col_c3 = st.columns([1, 2, 1])
+    # HYPER-CAI起動ボタン（黒・金縁・白文字／コンパクト）
+    st.markdown("""
+    <style>
+    [data-testid="stElementContainer"]:has(.hyper-launch-anchor) + [data-testid="stElementContainer"] button {
+        background: #000000 !important;
+        color: #FFFFFF !important;
+        border: 1px solid rgba(255, 215, 0, 0.6) !important;
+        box-shadow: 0 0 14px rgba(255, 215, 0, 0.5) !important;
+        font-weight: 600 !important;
+        letter-spacing: 1px;
+        border-radius: 6px !important;
+        transition: all 0.25s ease;
+    }
+    [data-testid="stElementContainer"]:has(.hyper-launch-anchor) + [data-testid="stElementContainer"] button:hover {
+        background: #0a0a0a !important;
+        box-shadow: 0 0 22px rgba(255, 215, 0, 0.9) !important;
+        transform: translateY(-1px);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    col_c1, col_c2, col_c3 = st.columns([3, 2, 3])
     with col_c2:
-        if st.button("✨ HYPER-CAIくん-pro を起動する", type="primary", use_container_width=True):
+        st.markdown('<div class="hyper-launch-anchor"></div>', unsafe_allow_html=True)
+        if st.button("HYPER-CAIくん-pro を起動する", use_container_width=True, key="launch_hyper"):
             st.session_state.top_mode = "hyper"
             st.rerun()
     
