@@ -188,6 +188,16 @@ if st.session_state.top_mode is None:
     )
     st.markdown("<br>", unsafe_allow_html=True)
 
+    # --- HYPER-CAI-pro ボタン（真ん中上） ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    col_c1, col_c2, col_c3 = st.columns([1, 2, 1])
+    with col_c2:
+        if st.button("✨ HYPER-CAIくん-pro を起動する", type="primary", use_container_width=True):
+            st.session_state.app_mode = "HYPER-CAI" # モード名を合わせる
+            st.rerun()
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+
     c1, c2 = st.columns(2)
     with c1:
         st.markdown("""
