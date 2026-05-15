@@ -8,6 +8,7 @@ from utils import (
     create_google_doc,
     export_to_spreadsheet,
     AGENT_LIST,
+    ca_icon_img,
 )
 
 def show():
