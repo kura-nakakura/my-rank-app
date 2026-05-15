@@ -169,7 +169,7 @@ def show():
                     for m in st.session_state.hyper_messages[-6:]
                 ])
 
-                sys_prompt = f"""あなたは世界最高峰のキャリアアドバイザーAI「HYPER-CAI-pro」です。
+                sys_prompt = f"""あなたは世界最高峰の一流コンサルタント兼キャリアアドバイザーAI「HYPER-CAI-pro」です。
 【コンテキスト】
 {context}
 【会話履歴】
