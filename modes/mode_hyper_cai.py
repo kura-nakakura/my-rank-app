@@ -1,8 +1,90 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import re
+import time
 from google.genai import types as genai_types
 from utils import safe_generate_content, read_files, create_google_doc
+
+
+def _run_chat(prompt_text):
+    """ユーザー入力を受け取りAIから返答を得て履歴に追加する共通処理"""
+    st.session_state.hyper_messages.append({"role": "user", "content": prompt_text})
+
+    context = (
+        f"求職者情報:\n{st.session_state.hyper_context.get('seeker','')}\n\n"
+        f"求人情報:\n{st.session_state.hyper_context.get('job','')}"
+    )
+    history = "\n".join([
+        f"{m['role']}: {m['content']}"
+        for m in st.session_state.hyper_messages[-6:]
+    ])
+
+    sys_prompt = f"""あなたは世界最高峰のキャリアアドバイザーAI「HYPER-CAI-pro」です。
+【コンテキスト】
+{context}
+【会話履歴】
+{history}
+
+【あなたの任務】
+1. 圧倒的な分析力で求職者を内定に導く。
+2. プレゼン作成を依頼されたらMckinsey/BCGスタイルのスライド型HTMLを出力する。
+3. 文体は極めてプロフェッショナルで熱意が伝わるものにする。
+4. 最後に必ず「次の推奨アクション」を3つ提示する。
+
+【プレゼン資料の絶対ルール】
+スライド型プレゼンはボタンで切り替わる複数ページ構成のHTMLで出力。5枚以上のスライドを含めること。
+
+```html
+<!DOCTYPE html><html lang="ja"><head><style>
+  body{{margin:0;font-family:'Helvetica Neue',sans-serif;background:#e2e8f0;overflow:hidden;}}
+  .slide{{display:none;flex-direction:column;justify-content:flex-start;height:100vh;padding:60px 80px;background:#f8fafc;box-sizing:border-box;position:relative;}}
+  .slide.active{{display:flex;animation:fadeIn 0.5s ease-in-out;}}
+  @keyframes fadeIn{{from{{opacity:0;transform:translateY(10px);}}to{{opacity:1;transform:translateY(0);}}}}
+  h1{{color:#005088;font-size:60px;margin-bottom:20px;margin-top:20vh;text-align:center;}}
+  h2{{color:#005088;font-size:45px;border-left:8px solid #11caa0;padding-left:20px;margin-top:0;}}
+  .content{{flex-grow:1;width:100%;font-size:24px;color:#333;line-height:1.6;}}
+  .controls{{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);display:flex;gap:20px;z-index:1000;}}
+  button{{padding:12px 30px;font-size:18px;font-weight:bold;cursor:pointer;background:#005088;color:white;border:none;border-radius:30px;}}
+  .slide-number{{position:absolute;bottom:30px;right:40px;font-size:20px;color:#005088;font-weight:bold;}}
+</style></head><body>
+  <div id="slides-container">
+    <div class="slide active"><h1>[タイトル]</h1><div class="slide-number">1</div></div>
+    <div class="slide"><h2>[見出し]</h2><div class="content">[内容]</div><div class="slide-number">2</div></div>
+  </div>
+  <div class="controls">
+    <button onclick="prevSlide()">◀ 前へ</button>
+    <button onclick="nextSlide()">次へ ▶</button>
+  </div>
+  <script>
+    let current=0;const slides=document.querySelectorAll('.slide');
+    function showSlide(n){{slides.forEach(s=>s.classList.remove('active'));current=(n+slides.length)%slides.length;slides[current].classList.add('active');}}
+    function nextSlide(){{showSlide(current+1);}}function prevSlide(){{showSlide(current-1);}}
+  </script>
+</body></html>
+```
+
+ユーザーの指示: {prompt_text}
+"""
+    try:
+        pending_images = st.session_state.get("hyper_images", [])
+        if pending_images:
+            contents = []
+            for img in pending_images:
+                contents.append(
+                    genai_types.Part.from_bytes(data=img["bytes"], mime_type=img["mime"])
+                )
+            contents.append(sys_prompt)
+            resp = safe_generate_content(contents)
+            st.session_state.hyper_images = []
+        else:
+            resp = safe_generate_content(sys_prompt)
+        ai_msg = resp.text
+        st.session_state.hyper_messages.append({"role": "assistant", "content": ai_msg})
+    except Exception as e:
+        st.session_state.hyper_messages.append({
+            "role": "assistant",
+            "content": f"⚠️ エラーが発生しました: {e}",
+        })
 
 
 def show():
@@ -80,8 +162,18 @@ def show():
     if "hyper_images" not in st.session_state:
         st.session_state.hyper_images = []
 
+    # Phase 2/3から引き継ぎがあった場合の通知（中身があれば表示）
+    has_synced_seeker = bool(st.session_state.hyper_context.get("seeker", "").strip())
+    has_synced_job = bool(st.session_state.hyper_context.get("job", "").strip())
+    if has_synced_seeker or has_synced_job:
+        st.success(
+            "📥 他モードからコンテキストを引き継ぎました："
+            + ("【求職者情報】" if has_synced_seeker else "")
+            + ("【求人企業情報】" if has_synced_job else "")
+        )
+
     # ── コンテキスト入力 ───────────────────────────────────────
-    with st.expander("📥 引き継ぎ情報・ファイル添付"):
+    with st.expander("📥 引き継ぎ情報・ファイル添付", expanded=not (has_synced_seeker or has_synced_job)):
         c1, c2 = st.columns(2)
         with c1:
             st.session_state.hyper_context["seeker"] = st.text_area(
@@ -139,12 +231,29 @@ def show():
 
     # ── サイドバー クイックアクション ─────────────────────────
     st.sidebar.subheader("⚡ クイック・プロ・アクション")
-    if st.sidebar.button("🏆 内定獲得の戦略を立案", use_container_width=True):
-        st.session_state.hyper_input = "この求職者と企業の情報を分析して、内定を勝ち取るための全体戦略を立てて。"
-    if st.sidebar.button("📊 面接対策プレゼンを作成", use_container_width=True):
-        st.session_state.hyper_input = "求職者向けの面接対策プレゼン資料（HTML形式）を作成して。"
-    if st.sidebar.button("📧 企業への極上推薦文", use_container_width=True):
-        st.session_state.hyper_input = "企業担当者が即決で会いたくなるような、プロ視点の推薦文を書いて。"
+    quick_action = None
+    if st.sidebar.button("🏆 内定獲得の戦略を立案", use_container_width=True, key="qa_strategy"):
+        quick_action = "この求職者と企業の情報を分析して、内定を勝ち取るための全体戦略を立てて。"
+    if st.sidebar.button("📊 面接対策プレゼンを作成", use_container_width=True, key="qa_presen"):
+        quick_action = "求職者向けの面接対策プレゼン資料（HTML形式・5枚以上のスライド型）を作成して。"
+    if st.sidebar.button("📧 企業への極上推薦文", use_container_width=True, key="qa_recom"):
+        quick_action = "企業担当者が即決で会いたくなるような、プロ視点の推薦文を書いて。"
+    if st.sidebar.button("🎯 想定面接質問と模範回答", use_container_width=True, key="qa_qa"):
+        quick_action = "この求人に対して、想定される面接質問を10個と、求職者の強みを活かした模範回答を作成して。"
+    if st.sidebar.button("⚖️ 強み・弱み・リスク分析", use_container_width=True, key="qa_swot"):
+        quick_action = "この求職者の強み・弱み・採用リスクをSWOT分析の形式で洗い出して。"
+
+    # ── クイックアクションが押されたら即実行 ──────────────────
+    if quick_action:
+        with st.spinner("思考中..."):
+            _run_chat(quick_action)
+        st.rerun()
+
+    # ── チャット入力処理 ───────────────────────────────────────
+    if prompt := st.chat_input("HYPER-CAIに指示を出す..."):
+        with st.spinner("思考中..."):
+            _run_chat(prompt)
+        st.rerun()
 
     # ── チャット表示 ──────────────────────────────────────────
     chat_area = st.container(height=480)
@@ -152,107 +261,74 @@ def show():
         with chat_area.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    # ── チャット入力処理 ───────────────────────────────────────
-    if prompt := st.chat_input("HYPER-CAIに指示を出す..."):
-        st.session_state.hyper_messages.append({"role": "user", "content": prompt})
-        with chat_area.chat_message("user"):
-            st.markdown(prompt)
+    # ── 最新AI回答にHTMLプレゼンが含まれていればプレビュー ────
+    last_assistant_msg = next(
+        (m["content"] for m in reversed(st.session_state.hyper_messages) if m["role"] == "assistant"),
+        "",
+    )
+    html_match = re.search(r'<!DOCTYPE html>.*?</html>', last_assistant_msg, re.DOTALL | re.IGNORECASE)
+    if html_match:
+        st.divider()
+        st.subheader("📺 プレゼン資料プレビュー")
+        components.html(html_match.group(), height=520, scrolling=True)
+        st.download_button(
+            "📥 プレゼンHTMLをダウンロード",
+            html_match.group(),
+            file_name=f"strategy_{time.strftime('%Y%m%d_%H%M')}.html",
+            mime="text/html",
+            key="dl_presen",
+        )
 
-        with chat_area.chat_message("assistant"):
-            with st.spinner("思考中..."):
-                context = (
-                    f"求職者情報:\n{st.session_state.hyper_context['seeker']}\n\n"
-                    f"求人情報:\n{st.session_state.hyper_context['job']}"
-                )
-                history = "\n".join([
-                    f"{m['role']}: {m['content']}"
-                    for m in st.session_state.hyper_messages[-6:]
-                ])
+    # ── 出力アクション ─────────────────────────────────────────
+    st.divider()
+    st.subheader("📤 会話の出力")
+    out1, out2, out3 = st.columns(3)
 
-                sys_prompt = f"""あなたは世界最高峰のキャリアアドバイザーAI「HYPER-CAI-pro」です。
-【コンテキスト】
-{context}
-【会話履歴】
-{history}
+    # 会話全文をテキスト化
+    transcript = "\n\n".join([
+        f"【{('AI' if m['role']=='assistant' else 'ユーザー')}】\n{m['content']}"
+        for m in st.session_state.hyper_messages
+    ])
 
-【あなたの任務】
-1. 圧倒的な分析力で求職者を内定に導く。
-2. プレゼン作成を依頼されたらMckinsey/BCGスタイルのスライド型HTMLを出力する。
-3. 文体は極めてプロフェッショナルで熱意が伝わるものにする。
-4. 最後に必ず「次の推奨アクション」を3つ提示する。
+    with out1:
+        st.download_button(
+            "📥 会話全文をテキストで保存",
+            transcript,
+            file_name=f"HYPER-CAI_{time.strftime('%Y%m%d_%H%M')}.txt",
+            mime="text/plain",
+            use_container_width=True,
+            key="dl_transcript",
+        )
 
-【プレゼン資料の絶対ルール】
-スライド型プレゼンはボタンで切り替わる複数ページ構成のHTMLで出力。5枚以上のスライドを含めること。
-
-```html
-<!DOCTYPE html><html lang="ja"><head><style>
-  body{{margin:0;font-family:'Helvetica Neue',sans-serif;background:#e2e8f0;overflow:hidden;}}
-  .slide{{display:none;flex-direction:column;justify-content:flex-start;height:100vh;padding:60px 80px;background:#f8fafc;box-sizing:border-box;position:relative;}}
-  .slide.active{{display:flex;animation:fadeIn 0.5s ease-in-out;}}
-  @keyframes fadeIn{{from{{opacity:0;transform:translateY(10px);}}to{{opacity:1;transform:translateY(0);}}}}
-  h1{{color:#005088;font-size:60px;margin-bottom:20px;margin-top:20vh;text-align:center;}}
-  h2{{color:#005088;font-size:45px;border-left:8px solid #11caa0;padding-left:20px;margin-top:0;}}
-  .content{{flex-grow:1;width:100%;font-size:24px;color:#333;line-height:1.6;}}
-  .controls{{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);display:flex;gap:20px;z-index:1000;}}
-  button{{padding:12px 30px;font-size:18px;font-weight:bold;cursor:pointer;background:#005088;color:white;border:none;border-radius:30px;}}
-  .slide-number{{position:absolute;bottom:30px;right:40px;font-size:20px;color:#005088;font-weight:bold;}}
-</style></head><body>
-  <div id="slides-container">
-    <div class="slide active"><h1>[タイトル]</h1><div class="slide-number">1</div></div>
-    <div class="slide"><h2>[見出し]</h2><div class="content">[内容]</div><div class="slide-number">2</div></div>
-  </div>
-  <div class="controls">
-    <button onclick="prevSlide()">◀ 前へ</button>
-    <button onclick="nextSlide()">次へ ▶</button>
-  </div>
-  <script>
-    let current=0;const slides=document.querySelectorAll('.slide');
-    function showSlide(n){{slides.forEach(s=>s.classList.remove('active'));current=(n+slides.length)%slides.length;slides[current].classList.add('active');}}
-    function nextSlide(){{showSlide(current+1);}}function prevSlide(){{showSlide(current-1);}}
-  </script>
-</body></html>
-```
-
-ユーザーの指示: {prompt}
-"""
-                try:
-                    # 画像が添付されている場合はマルチモーダルで送信
-                    pending_images = st.session_state.get("hyper_images", [])
-                    if pending_images:
-                        contents = []
-                        for img in pending_images:
-                            contents.append(
-                                genai_types.Part.from_bytes(
-                                    data=img["bytes"], mime_type=img["mime"]
-                                )
-                            )
-                        contents.append(sys_prompt)
-                        resp = safe_generate_content(contents)
-                        st.session_state.hyper_images = []  # 送信後クリア
+    with out2:
+        if st.button("📄 最新AI回答をGoogle Docsに出力", use_container_width=True, key="docs_last"):
+            if not last_assistant_msg:
+                st.warning("AI回答がまだありません。")
+            else:
+                with st.spinner("Google Docsを作成中..."):
+                    success, doc_url = create_google_doc(
+                        f"HYPER-CAI_回答_{time.strftime('%Y%m%d_%H%M')}",
+                        last_assistant_msg,
+                    )
+                    if success:
+                        st.success(f"✅ **[Docsを開く]({doc_url})**")
                     else:
-                        resp = safe_generate_content(sys_prompt)
+                        st.error(doc_url)
 
-                    ai_msg = resp.text
-                    st.markdown(ai_msg)
-                    st.session_state.hyper_messages.append({"role": "assistant", "content": ai_msg})
+    with out3:
+        if st.button("📚 会話全文をGoogle Docsに出力", use_container_width=True, key="docs_all"):
+            with st.spinner("Google Docsを作成中..."):
+                success, doc_url = create_google_doc(
+                    f"HYPER-CAI_会話全文_{time.strftime('%Y%m%d_%H%M')}",
+                    transcript,
+                )
+                if success:
+                    st.success(f"✅ **[Docsを開く]({doc_url})**")
+                else:
+                    st.error(doc_url)
 
-                    # HTMLプレゼンが含まれていたらプレビュー表示
-                    html_match = re.search(r'<!DOCTYPE html>.*?</html>', ai_msg, re.DOTALL | re.IGNORECASE)
-                    if html_match:
-                        st.divider()
-                        st.subheader("📺 プレゼン資料プレビュー")
-                        components.html(html_match.group(), height=520, scrolling=True)
-                        st.download_button(
-                            "📥 プレゼンHTMLをダウンロード",
-                            html_match.group(),
-                            file_name="strategy.html",
-                            mime="text/html",
-                        )
-
-                except Exception as e:
-                    st.error(f"エラー: {e}")
-
-    if st.button("🔄 トークをリセット"):
+    st.divider()
+    if st.button("🔄 トークをリセット", key="reset_chat"):
         st.session_state.hyper_messages = []
         st.session_state.hyper_images = []
         st.rerun()
