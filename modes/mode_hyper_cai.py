@@ -132,17 +132,31 @@ def show():
             transform: translateY(-2px);
         }
 
-        /* 5. サイドバーのボタンは青いサイバースタイルを維持 */
+        /* 5. サイドバーのボタン → 黒背景・金色シャドウ・白文字 */
+        [data-testid="stSidebar"] {
+            background-color: #000000 !important;
+        }
         [data-testid="stSidebar"] .stButton>button {
-            background: linear-gradient(135deg, #00E5FF 0%, #0077FF 100%) !important;
-            color: white !important;
-            border: none !important;
-            box-shadow: 0 4px 10px rgba(0, 229, 255, 0.4) !important;
-            font-weight: bold !important;
+            background: #000000 !important;
+            color: #FFFFFF !important;
+            border: 1px solid rgba(255, 215, 0, 0.5) !important;
+            box-shadow: 0 0 12px rgba(255, 215, 0, 0.45) !important;
+            font-weight: 600 !important;
+            letter-spacing: 1px;
+            border-radius: 6px !important;
+            transition: all 0.25s ease;
         }
         [data-testid="stSidebar"] .stButton>button:hover {
-            box-shadow: 0 6px 15px rgba(0, 229, 255, 0.7) !important;
-            transform: translateY(-2px);
+            background: #0a0a0a !important;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.85) !important;
+            transform: translateY(-1px);
+        }
+        [data-testid="stSidebar"] h1,
+        [data-testid="stSidebar"] h2,
+        [data-testid="stSidebar"] h3,
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] p {
+            color: #FFFFFF !important;
         }
 
         /* 6. タイトル装飾 */
@@ -230,17 +244,17 @@ def show():
         }]
 
     # ── サイドバー クイックアクション ─────────────────────────
-    st.sidebar.subheader("⚡ クイック・プロ・アクション")
+    st.sidebar.subheader("クイック・プロ・アクション")
     quick_action = None
-    if st.sidebar.button("🏆 内定獲得の戦略を立案", use_container_width=True, key="qa_strategy"):
+    if st.sidebar.button("内定獲得の戦略を立案", use_container_width=True, key="qa_strategy"):
         quick_action = "この求職者と企業の情報を分析して、内定を勝ち取るための全体戦略を立てて。"
-    if st.sidebar.button("📊 面接対策プレゼンを作成", use_container_width=True, key="qa_presen"):
+    if st.sidebar.button("面接対策プレゼンを作成", use_container_width=True, key="qa_presen"):
         quick_action = "求職者向けの面接対策プレゼン資料（HTML形式・5枚以上のスライド型）を作成して。"
-    if st.sidebar.button("📧 企業への極上推薦文", use_container_width=True, key="qa_recom"):
+    if st.sidebar.button("企業への極上推薦文", use_container_width=True, key="qa_recom"):
         quick_action = "企業担当者が即決で会いたくなるような、プロ視点の推薦文を書いて。"
-    if st.sidebar.button("🎯 想定面接質問と模範回答", use_container_width=True, key="qa_qa"):
+    if st.sidebar.button("想定面接質問と模範回答", use_container_width=True, key="qa_qa"):
         quick_action = "この求人に対して、想定される面接質問を10個と、求職者の強みを活かした模範回答を作成して。"
-    if st.sidebar.button("⚖️ 強み・弱み・リスク分析", use_container_width=True, key="qa_swot"):
+    if st.sidebar.button("強み・弱み・リスク分析", use_container_width=True, key="qa_swot"):
         quick_action = "この求職者の強み・弱み・採用リスクをSWOT分析の形式で洗い出して。"
 
     # ── クイックアクションが押されたら即実行 ──────────────────

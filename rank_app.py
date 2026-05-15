@@ -256,11 +256,12 @@ st.sidebar.divider()
 
 agent_name = st.sidebar.text_input("アドバイザー名", placeholder="山田 太郎")
 
-st.sidebar.divider()
-st.sidebar.subheader("📋 面談カルテ履歴 (最新20件)")
-if not st.session_state.carte_log:
+if st.session_state.top_mode != "hyper":
+  st.sidebar.divider()
+  st.sidebar.subheader("📋 面談カルテ履歴 (最新20件)")
+  if not st.session_state.carte_log:
     st.sidebar.caption("カルテの履歴はありません")
-else:
+  else:
     for i, log in enumerate(st.session_state.carte_log):
         with st.sidebar.expander(f"👤 {log['time']} ({log['name']}様)"):
             if st.button("🔄 復元", key=f"c_res_{i}"):
@@ -304,11 +305,11 @@ else:
                     else:
                         st.error(doc_url)
 
-st.sidebar.divider()
-st.sidebar.subheader("📄 書類生成履歴 (最新20件)")
-if not st.session_state.history_log:
+  st.sidebar.divider()
+  st.sidebar.subheader("📄 書類生成履歴 (最新20件)")
+  if not st.session_state.history_log:
     st.sidebar.caption("書類履歴はありません")
-else:
+  else:
     for i, log in enumerate(st.session_state.history_log):
         with st.sidebar.expander(f"📁 {log['time']} ({log['job']})"):
             if st.button("🔄 この画面を復元する", key=f"restore_btn_{i}"):
